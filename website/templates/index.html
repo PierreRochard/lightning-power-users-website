@@ -3,91 +3,121 @@
 {% import 'macros/definition_list_macro.html' as dl %}
 
 {% block body %}
-<script>
-    var clipboard = new ClipboardJS('.btn');
-</script>
-<div class="album py-5">
-    <div class="container">
-        <div class="row">
+    <script>
+        var clipboard = new ClipboardJS('.btn');
+    </script>
+    <div class="album py-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-1"></div>
+                <div class="col-lg-4">
+                    <div class="card mb-4 shadow-sm">
+                        <h4 class="card-header">
+                            Start Here
+                        </h4>
+                        <img class="card-img-top"
+                             src="{{ url_for('static',filename='img/joule.png') }}"
+                             alt="Joule Icon" width="100">
 
-            <div class="col-lg-1"></div>
-            <div class="col-lg-4">
-                <div class="card mb-4 shadow-sm">
-                    <h4 class="card-header">
-                        Start Here
-                    </h4>
-                    <img class="card-img-top" src="{{ url_for('static',filename='img/joule.png') }}" alt="Joule Icon" width="100">
-
-                    <div class="text-center">
-                    <div class="card-body">
-                        <a class="btn navbar-btn btn-info btn-lg"
-                           href="https://medium.com/lightning-power-users/bitcoin-lightning-joule-chrome-extension-ac149bb05cb9"  target="_blank">
-                            Install Joule
-                        </a>
-                    </div>
+                        <div class="text-center">
+                            <div class="card-body">
+                                <a class="btn navbar-btn btn-info btn-lg"
+                                   href="https://medium.com/lightning-power-users/bitcoin-lightning-joule-chrome-extension-ac149bb05cb9"
+                                   target="_blank">
+                                    Install Joule
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="card mb-4 shadow-sm">
-                    <h4 class="card-header">
-                        Open a channel
-                    </h4>
-                    <div class="card-body">
-                        <div class="col-md-12">
-                            <div class="form-group">
-                                <div class="row">
-                                    <div class="col-md-12 text-center">
-                                        <label for="foo">
-                                            Pubkey@Host:Port
-                                        </label>
+                <div class="col-lg-6">
+                    <div class="card mb-4 shadow-sm">
+                        <h4 class="card-header">
+                            Outbound Capacity
+                        </h4>
+                        <div class="card-body">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <div class="row">
+                                        <div class="col-md-12 text-center">
+                                            <label for="foo">
+                                                Pubkey@Host:Port
+                                            </label>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        <input class="form-control"
-                                               style="width: 100%;
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <input class="form-control"
+                                                   style="width: 100%;
                                                           text-align: center;"
-                                               id="foo"
-                                               value="0331f80652fb840239df8dc99205792bba2e559a05469915804c08420230e23c7c@lightningpowerusers.com:9735">
+                                                   id="foo"
+                                                   value="0331f80652fb840239df8dc99205792bba2e559a05469915804c08420230e23c7c@lightningpowerusers.com:9735">
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="row" style="padding-top: 20px;">
-                                    <div class="col-md-12 text-center">
-                                        <button type="button"
-                                                class="btn btn-lg btn-outline-secondary"
-                                                data-clipboard-target="#foo">
-                                            Copy
-                                        </button>
+                                    <div class="row" style="padding-top: 20px;">
+                                        <div class="col-md-12 text-center">
+                                            <button type="button"
+                                                    class="btn btn-lg btn-outline-secondary"
+                                                    data-clipboard-target="#foo">
+                                                Copy
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div class="row" style="padding-top: 20px;">
-                                    <div class="col-md-12 text-center">
-                                        <div class="alert alert-warning">
-                                            <h4 class="alert-heading">
-                                                Recommended Channel Size
-                                            </h4>
-                                            <p class="mb-0">
-                                                Between 500,000 satoshis (~$20)
-                                                and 16,500,000 satoshis (~$600)
-                                            </p>
+                                    <div class="row" style="padding-top: 20px;">
+                                        <div class="col-md-12 text-center">
+                                            <div class="alert alert-warning">
+                                                <h5 class="alert-heading">
+                                                    Recommended Channel Size
+                                                </h5>
+                                                <p>
+                                                    Between 500,000 satoshis
+                                                    (~$20)<br>
+                                                    and 16,500,000 satoshis
+                                                    (~$600)
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-
-                                {% if info %}
-                                <div class="row">
-                                    <div class="col-md-1">
-                                    </div>
-                                    <div class="col-md-10">
-                                        {{ dl.definition_list(title='Node Info',
-                                        data_dict=info) }}
-                                    </div>
-                                    <div class="col-md-1"></div>
-                                </div>
-                                {% endif %}
                             </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-1"></div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-1"></div>
+                <div class="col-lg-4">
+                </div>
+                <div class="col-lg-6">
+                    <div class="card mb-4 shadow-sm">
+                        <h4 class="card-header">
+                            Inbound Capacity
+                        </h4>
+                        <div class="card-body">
+                            <p>
+                                Request inbound capacity.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-1"></div>
+            </div>
+            <div class="row">
+                <div class="col-lg-1"></div>
+                <div class="col-lg-4">
+                </div>
+                <div class="col-lg-6">
+                    <div class="card mb-4 shadow-sm">
+                        <h4 class="card-header">
+                            Node Info
+                        </h4>
+                        <div class="card-body">
+                            {% if info %}
+                                {{ dl.definition_list(title=None, data_dict=info) }}
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -95,6 +125,6 @@
             <div class="col-lg-1"></div>
         </div>
     </div>
-</div>
+    </div>
 
 {% endblock %}
