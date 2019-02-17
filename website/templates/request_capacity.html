@@ -5,12 +5,7 @@
 {% block body %}
 
 <script>
-    const pricePerSat = {
-    {
-        price_per_sat
-    }
-    }
-    ;
+    const pricePerSat = {{ price_per_sat }};
 
     document.addEventListener('DOMContentLoaded', function () {
         const capacitySelect = document.querySelector('select[name="capacity"]');
@@ -33,7 +28,7 @@
             capacityFeeRateSelect.disabled = false;
             console.log(capacityFeeRateSelect.value);
             if (Math.round(capacityFeeRateSelect.value * 100) === 0) {
-                capacityFeeRateSelect.value = 0.02;
+                capacityFeeRateSelect.value = 0.03;
             }
             capacityFeeRateSelect.options[0].disabled = true;
             document.querySelector('#selected-capacity').innerHTML = selectedCapacity.toLocaleString();

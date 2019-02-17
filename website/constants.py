@@ -35,9 +35,9 @@ CAPACITY_CHOICES = [500000, 1000000, 2000000, 5000000, 16777215]
 
 CAPACITY_FEE_RATES = [
     (Decimal('0'), 'One week free'),
-    (Decimal('0.02'), 'One month 2%'),
-    (Decimal('0.1'), 'Six months 10%'),
-    (Decimal('0.18'), 'One year 18%')
+    (Decimal('0.03'), 'One month 3%'),
+    (Decimal('0.12'), 'Six months 12%'),
+    (Decimal('0.22'), 'One year 22%')
 ]
 
 
