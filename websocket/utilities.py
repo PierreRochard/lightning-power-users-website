@@ -1,7 +1,7 @@
 import uuid
 
 from website.constants import keyring
-from website.logging import log
+from website.logger import log
 
 
 def get_server_id(server_name: str):

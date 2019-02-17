@@ -79,43 +79,51 @@ class MainServer(object):
                     data_type='inbound_capacity_request'
                 )
                 return
+
         elif server_id == get_server_id('invoices'):
-            if data_from_server['type'] == 'invoice_paid':
-                invoice_data = data_from_server['invoice_data']
-                package = self.channel_opening_invoices.get_invoice_package(
-                    r_hash=invoice_data['r_hash']
+            invoice_data = data_from_server['invoice_data']
+            package = self.channel_opening_invoices.get_invoice_package(
+                r_hash=invoice_data['r_hash']
+            )
+            if package is None:
+                log.debug(
+                    'r_hash not found in channel_opening_invoices',
+                    invoice_data=invoice_data
                 )
-                if package is None:
-                    log.debug(
-                        'r_hash not found in channel_opening_invoices',
-                        invoice_data=invoice_data
-                    )
-                    return
+                return
 
-                log.debug('emit invoice_data', invoice_data=invoice_data)
-                await self.users.send(
-                    package['user_id'],
-                    invoice_data
-                )
+            log.debug('emit invoice_data', invoice_data=invoice_data)
+            await self.users.send(
+                package['user_id'],
+                invoice_data
+            )
 
-                if package.get('reciprocation_capacity', None):
-                    local_funding_amount = package['reciprocation_capacity']
-                else:
-                    local_funding_amount = int(package['form_data']['capacity'])
+            if package.get('reciprocation_capacity', None):
+                local_funding_amount = package['reciprocation_capacity']
+            else:
+                local_funding_amount = int(package['form_data']['capacity'])
 
-                sat_per_byte = int(package['form_data']['transaction_fee_rate'])
-                data = dict(
-                    server_id=get_server_id('main'),
-                    user_id=package['user_id'],
-                    type='open_channel',
-                    remote_pubkey=package['parsed_pubkey'],
-                    local_funding_amount=local_funding_amount,
-                    sat_per_byte=sat_per_byte
-                )
-                await self.channel_opening_server.send(json.dumps(data))
+            sat_per_byte = int(package['form_data']['transaction_fee_rate'])
+            data = dict(
+                server_id=get_server_id('main'),
+                user_id=package['user_id'],
+                type='open_channel',
+                remote_pubkey=package['parsed_pubkey'],
+                local_funding_amount=local_funding_amount,
+                sat_per_byte=sat_per_byte
+            )
+            await self.channel_opening_server.send(json.dumps(data))
 
         elif server_id == get_server_id('channels'):
             self.channel_opening_server = websocket
+            message = {
+                'error': data_from_server.get('error', None),
+                'open_channel_update': data_from_server.get('open_channel_update', None)
+            }
+            await self.users.send(
+                user_id=user_id,
+                message=message
+            )
 
 
 if __name__ == '__main__':
