@@ -14,14 +14,14 @@ class Users(object):
     def __init__(self):
         self.users = {}
 
-    async def register(self, tracker: str, websocket):
-        self.users[tracker] = User(websocket)
+    async def register(self, user_id: str, websocket):
+        self.users[user_id] = User(websocket)
 
-    async def unregister(self, tracker: str):
-        del self.users[tracker]
+    async def unregister(self, user_id: str):
+        del self.users[user_id]
 
-    async def notify_user(self, tracker: str, message):
-        user = self.users.get(tracker, None)
+    async def send(self, user_id: str, message):
+        user = self.users.get(user_id, None)
         if user is None:
             return
         await user.send(json.dumps(message))

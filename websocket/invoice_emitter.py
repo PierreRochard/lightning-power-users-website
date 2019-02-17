@@ -7,7 +7,7 @@ from google.protobuf.json_format import MessageToDict
 
 from node_launcher.logging import log
 from tools.lnd_client import lnd_remote_client
-from websocket.utilities import get_server_key
+from websocket.utilities import get_server_id
 
 
 def emit_invoices():
@@ -16,7 +16,7 @@ def emit_invoices():
             invoice_subscription = lnd_remote_client.subscribe_invoices(settle_index=1)
             for invoice in invoice_subscription:
                 data = {
-                    'tracker': get_server_key('invoices'),
+                    'server_id': get_server_id('invoices'),
                     'invoice_data': MessageToDict(invoice)
                 }
                 data_string = json.dumps(data)

@@ -4,18 +4,18 @@ from website.constants import keyring
 from website.logging import log
 
 
-def get_server_key(server_name: str):
-    log.debug('getting server key', server_name=server_name)
-    server_key = keyring.get_password(
-        service=server_name + '_server_key',
-        username=server_name + '_server_key',
+def get_server_id(server_name: str):
+    log.debug('getting server id', server_name=server_name)
+    server_id = keyring.get_password(
+        service=server_name + '_server_id',
+        username=server_name + '_server_id',
     )
-    if server_key is None:
-        log.debug('creating server key', server_name=server_name)
-        server_key = uuid.uuid4().hex
+    if server_id is None:
+        log.debug('creating server id', server_name=server_name)
+        server_id = uuid.uuid4().hex
         keyring.set_password(
-            service=server_name + '_server_key',
-            username=server_name + '_server_key',
-            password=server_key
+            service=server_name + '_server_id',
+            username=server_name + '_server_id',
+            password=server_id
         )
-    return server_key
+    return server_id

@@ -5,13 +5,13 @@
 {% block body %}
 
     <script type="text/javascript" charset="utf-8">
-        var exampleSocket = new WebSocket("ws://localhost:8765");
-        exampleSocket.onopen = function (event) {
-            const tracker = "{{ session['tracker'] }}";
-            const tracker_object = JSON.stringify({tracker: tracker});
-            exampleSocket.send(tracker_object);
+        var user_websocket = new WebSocket("ws://localhost:8765");
+        user_websocket.onopen = function (event) {
+            const user_id = "{{ session['user_id'] }}";
+            const user_id_object = JSON.stringify({user_id: user_id});
+            user_websocket.send(user_id_object);
         };
-        exampleSocket.onmessage = function (event) {
+        user_websocket.onmessage = function (event) {
             console.log(event.data);
             const cardBody = document.querySelector('body > div.album.py-5 > div > div > div > div > div > div > div.form-group');
             if (cardBody) {

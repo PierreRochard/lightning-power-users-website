@@ -59,9 +59,9 @@ class RequestCapacityView(BaseView):
         last_price = price['last']
         price_per_sat = last_price / COIN
         form = get_request_capacity_form()
-        if session.get('tracker', None) is None:
-            session['tracker'] = uuid.uuid4().hex
-        log.debug('RequestCapacityView.index', tracker=session['tracker'])
+        if session.get('user_id', None) is None:
+            session['user_id'] = uuid.uuid4().hex
+        log.debug('RequestCapacityView.index', user_id=session['user_id'])
         return render_template('request_capacity.html',
                                form=form,
                                price_per_sat=price_per_sat,
@@ -207,8 +207,8 @@ class RequestCapacityView(BaseView):
         payment_request = invoice['payment_request']
         uri = ':'.join(['lightning', payment_request])
 
-        if not session.get('tracker', None):
-            session['tracker'] = uuid.uuid4().hex
+        if not session.get('user_id', None):
+            session['user_id'] = uuid.uuid4().hex
 
         if requested_capacity == 0:
             requested_capacity_copy = f'Reciprocate {reciprocation_capacity:,d}'
@@ -234,7 +234,7 @@ class RequestCapacityView(BaseView):
             'bill': bill,
             'reciprocation_capacity': reciprocation_capacity,
             'form_data': form_data,
-            'tracker': session['tracker'],
+            'user_id': session['user_id'],
             'invoice': invoice,
             'EXPECTED_BYTES': EXPECTED_BYTES,
             'parsed_pubkey': pub_key,
@@ -243,7 +243,7 @@ class RequestCapacityView(BaseView):
 
         log.debug('request-capacity.process_request', data=data)
 
-        dump_json(data=data, name='capacity_request', label=session['tracker'])
+        dump_json(data=data, name='capacity_request', label=session['user_id'])
 
         log.debug(
             'request-capacity.process_request sending websocket data'

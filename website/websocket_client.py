@@ -5,13 +5,13 @@ import threading
 import websockets
 
 from node_launcher.logging import log
-from websocket.utilities import get_server_key
+from websocket.utilities import get_server_id
 
 
 def send_websocket_message(data):
     async def send_to_server():
         async with websockets.connect('ws://localhost:8765') as websocket:
-            data['tracker'] = get_server_key('webapp')
+            data['server_id'] = get_server_id('webapp')
             data_string = json.dumps(data)
             await websocket.send(data_string)
             log.debug('sending websocket message', data=data)
