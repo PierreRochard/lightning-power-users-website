@@ -4,7 +4,10 @@ flask-caching
 Flask-QRcode
 flask-wtf
 Frozen-Flask
+google-api-python-client
 humanize
+networkx
+oauth2client
 python-bitcoinlib
 requests
 structlog

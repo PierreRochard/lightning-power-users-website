@@ -118,3 +118,7 @@ pyvenv.cfg
 .venv
 pip-selfcheck.json
 
+/tools/remote/
+/tools/secrets.py
+/tools/credentials.json
+/tools/token.json

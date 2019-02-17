@@ -7,7 +7,7 @@ from google.protobuf.json_format import MessageToDict
 
 from node_launcher.logging import log
 from tools.lnd_client import lnd_remote_client
-from website.constants import FLASK_SECRET_KEY
+from websocket.utilities import get_server_key
 
 
 def emit_invoices():
@@ -16,7 +16,7 @@ def emit_invoices():
             invoice_subscription = lnd_remote_client.subscribe_invoices(settle_index=1)
             for invoice in invoice_subscription:
                 data = {
-                    'tracker': FLASK_SECRET_KEY,
+                    'tracker': get_server_key('invoices'),
                     'invoice_data': MessageToDict(invoice)
                 }
                 data_string = json.dumps(data)
@@ -33,4 +33,5 @@ def emit_invoices():
 
 
 if __name__ == '__main__':
+
     emit_invoices()

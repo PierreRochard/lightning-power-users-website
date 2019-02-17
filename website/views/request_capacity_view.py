@@ -16,7 +16,7 @@ from website.forms.request_capacity_form import RequestCapacityForm
 from website.lnd_queries.channels import Channels
 from website.utilities.cache.cache import get_latest
 from website.utilities.dump_json import dump_json
-from website.utilities.websocket_client import send_websocket_message
+from website.websocket_client import send_websocket_message
 
 
 def get_request_capacity_form() -> RequestCapacityForm:

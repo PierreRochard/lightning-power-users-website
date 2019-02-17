@@ -5,13 +5,13 @@ import threading
 import websockets
 
 from node_launcher.logging import log
-from website.constants import FLASK_SECRET_KEY
+from websocket.utilities import get_server_key
 
 
 def send_websocket_message(data):
     async def send_to_server():
         async with websockets.connect('ws://localhost:8765') as websocket:
-            data['tracker'] = FLASK_SECRET_KEY
+            data['tracker'] = get_server_key('webapp')
             data_string = json.dumps(data)
             await websocket.send(data_string)
             log.debug('sending websocket message', data=data)
