@@ -122,3 +122,6 @@ pip-selfcheck.json
 /tools/secrets.py
 /tools/credentials.json
 /tools/token.json
+/website/package-lock.json
+/website/webpack.config.js
+!/website/assets/scripts/

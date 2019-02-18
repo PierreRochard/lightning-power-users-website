@@ -1,5 +1,6 @@
 flask
 flask-admin
+Flask-Assets
 flask-caching
 Flask-QRcode
 flask-wtf

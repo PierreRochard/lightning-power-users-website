@@ -4,7 +4,9 @@ import sys
 import structlog
 from flask import Flask, redirect, url_for
 from flask_admin import Admin
+from flask_assets import Environment
 from flask_qrcode import QRcode
+from webassets import Bundle
 
 from website.extensions import bitcoind, cache, lnd
 from website.views.home_view import HomeView
@@ -35,6 +37,11 @@ class App(Flask):
             context_class=structlog.threadlocal.wrap_dict(dict),
             logger_factory=structlog.stdlib.LoggerFactory(),
         )
+        assets = Environment(self)
+
+        js = Bundle('js/app.js',
+                    filters='jsmin', output='gen/packed.js')
+        assets.register('js_all', js)
 
         bitcoind.init_app(self)
         cache.init_app(self)

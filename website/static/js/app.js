@@ -16,11 +16,18 @@ document.addEventListener('DOMContentLoaded', async function () {
         event.preventDefault();
         const form_data = $(this).serialize();
         console.log(form_data);
-        user_websocket.send(form_data)
-    }
+        const connectFormDataObject = {
+            user_id: user_id,
+            action: 'connect',
+            form_data: form_data
+        };
+        const connectFormDataString = JSON.stringify(connectFormDataObject);
 
+        user_websocket.send(connectFormDataString)
+    }
     const connectForm = document.getElementById('connect_form');
     connectForm.onsubmit = connectFormSubmit;
+
 
 }, false);
 
