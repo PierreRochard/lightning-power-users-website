@@ -4,42 +4,6 @@ from decimal import Decimal
 from os.path import expanduser
 from typing import Dict
 
-from node_launcher.constants import (
-    DARWIN,
-    LINUX,
-    OPERATING_SYSTEM,
-    OperatingSystem,
-    WINDOWS,
-    LOCALAPPDATA)
-
-FLASK_SECRET_KEY = os.environ['FLASK_SECRET_KEY']
-
-WEBSITE_DATA_PATHS: Dict[OperatingSystem, str] = {
-    DARWIN: expanduser('~/Library/Application Support/Node Website/'),
-    LINUX: expanduser('~/.node_website'),
-    WINDOWS: os.path.join(LOCALAPPDATA, 'Node Website')
-}
-WEBSITE_DATA_PATH = WEBSITE_DATA_PATHS[OPERATING_SYSTEM]
-
-if not os.path.exists(WEBSITE_DATA_PATH):
-    os.mkdir(WEBSITE_DATA_PATH)
-
-CACHE_PATH = os.path.join(WEBSITE_DATA_PATH, 'cache')
-
-if not os.path.exists(CACHE_PATH):
-    os.mkdir(CACHE_PATH)
-
-EXPECTED_BYTES = 500
-
-CAPACITY_CHOICES = [500000, 1000000, 2000000, 5000000, 16777215]
-
-CAPACITY_FEE_RATES = [
-    (Decimal('0'), 'One week free'),
-    (Decimal('0.03'), 'One month 3%'),
-    (Decimal('0.12'), 'Six months 12%'),
-    (Decimal('0.22'), 'One year 22%')
-]
-
 
 class StringConstant(object):
     def __init__(self, name: str):
@@ -73,6 +37,41 @@ OPERATING_SYSTEM = OperatingSystem(platform.system())
 IS_MACOS = OPERATING_SYSTEM == DARWIN
 IS_LINUX = OPERATING_SYSTEM == LINUX
 IS_WINDOWS = OPERATING_SYSTEM == WINDOWS
+
+# Only relevant for Windows
+LOCALAPPDATA = os.path.abspath(os.environ.get('LOCALAPPDATA', ''))
+APPDATA = os.path.abspath(os.environ.get('APPDATA', ''))
+PROGRAMS = os.environ.get('Programw6432', '')
+
+FLASK_SECRET_KEY = os.environ['FLASK_SECRET_KEY']
+
+WEBSITE_DATA_PATHS: Dict[OperatingSystem, str] = {
+    DARWIN: expanduser('~/Library/Application Support/Node Website/'),
+    LINUX: expanduser('~/.node_website'),
+    WINDOWS: os.path.join(LOCALAPPDATA, 'Node Website')
+}
+WEBSITE_DATA_PATH = WEBSITE_DATA_PATHS[OPERATING_SYSTEM]
+
+if not os.path.exists(WEBSITE_DATA_PATH):
+    os.mkdir(WEBSITE_DATA_PATH)
+
+CACHE_PATH = os.path.join(WEBSITE_DATA_PATH, 'cache')
+
+if not os.path.exists(CACHE_PATH):
+    os.mkdir(CACHE_PATH)
+
+EXPECTED_BYTES = 500
+
+CAPACITY_CHOICES = [500000, 1000000, 2000000, 5000000, 16777215]
+
+CAPACITY_FEE_RATES = [
+    (Decimal('0'), 'One week free'),
+    (Decimal('0.03'), 'One month 3%'),
+    (Decimal('0.12'), 'Six months 12%'),
+    (Decimal('0.22'), 'One year 22%')
+]
+
+
 
 if IS_WINDOWS:
     from keyring.backends.Windows import WinVaultKeyring

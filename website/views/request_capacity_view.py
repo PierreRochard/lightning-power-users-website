@@ -9,9 +9,9 @@ from google.protobuf.json_format import MessageToDict
 # noinspection PyProtectedMember
 from grpc._channel import _Rendezvous
 
-from node_launcher.node_set import NodeSet
 from website.constants import EXPECTED_BYTES, CAPACITY_CHOICES, \
     CAPACITY_FEE_RATES
+from website.extensions import lnd
 from website.forms.request_capacity_form import RequestCapacityForm
 from website.lnd_queries.channels import Channels
 from website.utilities.cache.cache import get_latest
@@ -115,11 +115,10 @@ class RequestCapacityView(BaseView):
             return redirect(url_for('request-capacity.index'))
 
         # Connect to peer
-        node_set = NodeSet()
 
         if ip_address is not None:
             try:
-                node_set.lnd_client.connect_peer(pub_key, ip_address)
+                lnd.rpc.connect_peer(pub_key, ip_address)
             except _Rendezvous as e:
                 details = e.details()
                 if 'already connected to peer' in details:
@@ -130,7 +129,7 @@ class RequestCapacityView(BaseView):
                               data=form_data, details=details)
                     return redirect(url_for('request-capacity.index'))
         else:
-            peers = node_set.lnd_client.list_peers()
+            peers = lnd.rpc.list_peers()
             try:
                 peer = [p for p in peers if p.pub_key == pub_key][0]
             except IndexError:
@@ -199,7 +198,7 @@ class RequestCapacityView(BaseView):
         else:
             memo += f'{requested_capacity} @ {requested_capacity_fee_rate}'
 
-        invoice = node_set.lnd_client.create_invoice(
+        invoice = lnd.rpc.create_invoice(
             value=int(total_fee),
             memo=memo
         )

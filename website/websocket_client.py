@@ -4,7 +4,7 @@ import threading
 
 import websockets
 
-from node_launcher.logging import log
+from website.logger import log
 from websocket.utilities import get_server_id
 
 

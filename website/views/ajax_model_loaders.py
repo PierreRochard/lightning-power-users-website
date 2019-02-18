@@ -1,9 +1,9 @@
 from flask_admin.model.ajax import AjaxModelLoader, DEFAULT_PAGE_SIZE
 from markupsafe import Markup
 
+from lnd_grpc.protos.rpc_pb2 import Channel
 from website.formatters.lnd import pub_key_formatter
 from website.views.lnd_model_view import LNDModelView
-from node_launcher.node_set.lnd_client.rpc_pb2 import Channel
 
 
 class PeersAjaxModelLoader(AjaxModelLoader):

@@ -4,8 +4,8 @@ from datetime import datetime
 # noinspection PyProtectedMember
 from grpc._channel import _Rendezvous
 
-from node_launcher.node_set.lnd_client.rpc_pb2 import OpenStatusUpdate
-from tools.lnd_client import lnd_remote_client
+from lnd_grpc import lnd_grpc
+from lnd_grpc.protos.rpc_pb2 import OpenStatusUpdate
 
 
 def rebalance(self):
@@ -28,7 +28,7 @@ def rebalance(self):
                 print(node.pubkey, f'{rebalance_amount:,d}',
                       node.peer_info.get('sat_recv'),
                       node.peer_info.get('sat_sent'))
-                response = lnd_remote_client.open_channel(
+                response = lnd_grpc.Client().open_channel(
                     node_pubkey_string=node.pubkey,
                     local_funding_amount=rebalance_amount, push_sat=0,
                     sat_per_byte=5)

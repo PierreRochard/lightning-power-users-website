@@ -3,8 +3,8 @@ import json
 from google.protobuf.json_format import MessageToDict
 from grpc._channel import _Rendezvous
 
-from tools.lnd_client import lnd_remote_client
-from website.logging import log
+from lnd_grpc import lnd_grpc
+from website.logger import log
 from websocket.utilities import get_server_id
 
 
@@ -34,7 +34,7 @@ class ChannelOpeningServer(object):
             return
 
         log.debug('Opening channel', data=data)
-        open_channel_response = lnd_remote_client.open_channel(
+        open_channel_response = lnd_grpc.Client().open_channel(
             node_pubkey_string=data['remote_pubkey'],
             local_funding_amount=int(data['local_funding_amount']),
             push_sat=0,

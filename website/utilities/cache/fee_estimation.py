@@ -1,15 +1,12 @@
 from datetime import datetime
 
-from bitcoin.rpc import Proxy
-
-from node_launcher.logging import log
-from node_launcher.node_set import NodeSet
+from website.logger import log
+from website.extensions import bitcoind
 from website.utilities.dump_json import dump_json
 
 
 def cache_fee_estimate():
-    node_set = NodeSet()
-    proxy = Proxy(btc_conf_file=node_set.bitcoin.file.path)
+
     fee_estimates = [
         dict(conf_target=1, label='Ten minutes'),
         dict(conf_target=6, label='One_hour'),
@@ -23,21 +20,19 @@ def cache_fee_estimate():
 
     for fee_estimate in fee_estimates:
         # noinspection PyProtectedMember
-        fee_estimate['conservative'] = proxy._call(
-            'estimatesmartfee',
+        fee_estimate['conservative'] = bitcoind.estimate_smart_fee(
             fee_estimate['conf_target'],
             'CONSERVATIVE'
         )
 
         # noinspection PyProtectedMember
-        fee_estimate['economical'] = proxy._call(
-            'estimatesmartfee',
+        fee_estimate['economical'] = bitcoind.estimate_smart_fee(
             fee_estimate['conf_target'],
             'ECONOMICAL'
         )
 
         log.info(
-            'estimatesmartfee',
+            'estimate_smart_fee',
             fee_estimate=fee_estimate,
         )
 

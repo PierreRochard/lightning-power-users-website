@@ -5,9 +5,9 @@ from google.protobuf.json_format import MessageToDict
 # noinspection PyProtectedMember
 from grpc._channel import _Rendezvous
 
-from node_launcher.logging import log
+from lnd_grpc import lnd_grpc
+from website.logger import log
 from tools.channel import Channel
-from tools.lnd_client import lnd_remote_client
 
 
 class Node(object):
@@ -22,7 +22,7 @@ class Node(object):
         self.info = None
         self.state = None
         try:
-            self.info = MessageToDict(lnd_remote_client.get_node_info(pubkey))
+            self.info = MessageToDict(lnd_grpc.Client().get_node_info(pubkey))
             self.state = 'online'
         except _Rendezvous as e:
             details = e.details().lower()
@@ -45,7 +45,7 @@ class Node(object):
         )
         for address in self.info['node'].get('addresses', []):
             try:
-                lnd_remote_client.connect_peer(self.pubkey,
+                lnd_grpc.Client().connect_peer(self.pubkey,
                                                address['addr'],
                                                timeout=5)
                 log.info(

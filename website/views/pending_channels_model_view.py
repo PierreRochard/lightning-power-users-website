@@ -2,9 +2,8 @@ from flask_admin import expose
 from flask_admin.model import BaseModelView
 from wtforms import Form
 
-from node_launcher.logging import log
-from node_launcher.node_set import NodeSet
-from website.extensions import cache
+from website.logger import log
+from website.extensions import cache, lnd
 from website.formatters.common import satoshi_formatter
 from website.formatters.lnd import tx_hash_formatter, channel_point_formatter
 
@@ -76,13 +75,14 @@ class PendingChannelsModelView(BaseModelView):
 
     def get_list(self, page, sort_field, sort_desc, search, filters,
                  page_size=None):
-        node_set = NodeSet()
+        # noinspection PyBroadException
         try:
-            pending_channels = node_set.lnd_client.list_pending_channels()
-        except Exception as e:
+            pending_channels = lnd.rpc.list_pending_channels()
+        except:
             log.error(
                 'PendingChannelsModelView.get_list exception',
-                exc_info=True)
+                exc_info=True
+            )
             return 0, []
 
         if pending_channels is not None:

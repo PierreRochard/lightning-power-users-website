@@ -1,4 +1,4 @@
-from node_launcher.node_set.lnd_client.rpc_pb2 import Channel as Channels
+from lnd_grpc.protos.rpc_pb2 import Channel as Channels
 
 
 class DefaultModel(dict):

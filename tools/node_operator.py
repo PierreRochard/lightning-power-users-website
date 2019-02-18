@@ -1,5 +1,4 @@
 from collections import defaultdict
-from datetime import datetime
 from pprint import pformat
 from typing import Dict
 
@@ -7,11 +6,11 @@ from google.protobuf.json_format import MessageToDict
 # noinspection PyProtectedMember
 from grpc._channel import _Rendezvous
 
-from node_launcher.logging import log
-from node_launcher.node_set.lnd_client.rpc_pb2 import OpenStatusUpdate
+from lnd_grpc import lnd_grpc
+from lnd_grpc.protos.rpc_pb2 import OpenStatusUpdate
+from website.logger import log
 from tools.channel import Channel
 from tools.google_sheet import get_google_sheet_data
-from tools.lnd_client import lnd_remote_client
 from tools.node import Node
 
 
@@ -28,17 +27,18 @@ class NodeOperator(object):
         self.nodes = MyDefaultDict(Node)
         self.get_channels()
         self.get_peers()
+        self.lnd_client = lnd_grpc.Client()
 
     def get_channels(self):
-        channels = lnd_remote_client.list_channels()
+        channels = self.lnd_client.list_channels()
         [self.nodes[m.remote_pubkey].add_channel(Channel(**MessageToDict(m)))
          for m in channels]
 
-        pending_channels = [c for c in lnd_remote_client.list_pending_channels()]
+        pending_channels = [c for c in self.lnd_client.pending_channels()]
         [self.nodes[m.remote_node_pub].add_channel(Channel(**m))
          for m in pending_channels]
 
-        closed_channels = [c for c in lnd_remote_client.closed_channels()]
+        closed_channels = [c for c in self.lnd_client.closed_channels()]
         [self.nodes[m.remote_pubkey].add_channel(Channel(**MessageToDict((m))))
          for m in closed_channels]
 
@@ -50,7 +50,7 @@ class NodeOperator(object):
         )
 
     def get_peers(self):
-        peers = lnd_remote_client.list_peers()
+        peers = self.lnd_client.list_peers()
         log.debug(
             'Got peers',
             peers=len(peers)
@@ -74,7 +74,7 @@ class NodeOperator(object):
                 if ip_address in address['addr']:
                     for channel in node.channels:
                         force = not channel.is_active
-                        txid = lnd_remote_client.close_channel(
+                        txid = self.lnd_client.close_channel(
                             channel_point=channel.channel_point,
                             force=force,
                             sat_per_byte=1

@@ -6,11 +6,10 @@ from google.protobuf.json_format import MessageToDict
 import networkx as nx
 from grpc._channel import _Rendezvous
 
-from node_launcher.logging import log
-from node_launcher.node_set.lnd_client.rpc_pb2 import ChannelGraph, \
-    OpenStatusUpdate
-from tools.lnd_client import get_local_client, lnd_remote_client
+from lnd_grpc import lnd_grpc
+from lnd_grpc.protos.rpc_pb2 import ChannelGraph, OpenStatusUpdate
 from tools.node_operator import NodeOperator
+from website.logger import log
 
 
 def convert_to_dict(data):
@@ -30,9 +29,9 @@ def save_to_csv(name: str, data: List[dict]):
 class LightningGraph(object):
     def __init__(self, pubkey: str):
         self.pubkey = pubkey
-        self.lnd_client = get_local_client()
+        self.lnd_client = lnd_grpc.Client()
         self.node_operator = NodeOperator()
-        self.graph: ChannelGraph = self.lnd_client.get_graph()
+        self.graph: ChannelGraph = self.lnd_client.describe_graph()
         self.nodes = convert_to_dict(self.graph.nodes)
         self.edges = convert_to_dict(self.graph.edges)
 
@@ -72,7 +71,7 @@ class LightningGraph(object):
                 )
                 continue
 
-            response = lnd_remote_client.open_channel(
+            response = lnd_grpc.Client().open_channel(
                 node_pubkey_string=node.pubkey,
                 local_funding_amount=max(1000000, node.remote_balance),
                 push_sat=0,
@@ -132,5 +131,5 @@ if __name__ == '__main__':
     if args.action == 'csv':
         lightning_graph.to_csv()
     elif args.action == 'open_channels':
-        data = lightning_graph.pagerank()
-        lightning_graph.open_channels('pagerank', data, top=50)
+        pagerank_data = lightning_graph.pagerank()
+        lightning_graph.open_channels('pagerank', pagerank_data, top=50)

@@ -1,25 +1,24 @@
 from google.protobuf.json_format import MessageToDict
 
-from node_launcher.logging import log
-from tools.lnd_client import lnd_remote_client
-from website.extensions import cache
+from website.logger import log
+from website.extensions import cache, lnd
 
 
 @cache.cached(timeout=3600, key_prefix='list_open_channels')
 def list_open_channels():
-    r = [MessageToDict(c) for c in lnd_remote_client.list_channels()]
+    r = [MessageToDict(c) for c in lnd.rpc.list_channels()]
     return r
 
 
 @cache.cached(timeout=5, key_prefix='list_pending_channels')
 def list_pending_channels():
-    r = [dict(c) for c in lnd_remote_client.list_pending_channels()]
+    r = [dict(c) for c in lnd.rpc.list_pending_channels()]
     return r
 
 
 @cache.cached(timeout=3600, key_prefix='list_closed_channels')
 def list_closed_channels():
-    r = [MessageToDict(c) for c in lnd_remote_client.closed_channels()]
+    r = [MessageToDict(c) for c in lnd.rpc.closed_channels()]
     return r
 
 

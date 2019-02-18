@@ -5,7 +5,7 @@ import websockets
 from google.protobuf.json_format import MessageToDict
 
 from lnd_grpc import lnd_grpc
-from node_launcher.logging import log
+from website.logger import log
 from websocket.utilities import get_server_id
 
 DEFAULT_WEBSOCKET_URL = 'ws://localhost:8765'

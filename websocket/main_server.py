@@ -4,7 +4,7 @@ from uuid import UUID
 
 import websockets
 
-from node_launcher.logging import log
+from website.logger import log
 from websocket.models.channel_opening_invoices import ChannelOpeningInvoices
 from websocket.models.users import Users
 from websocket.utilities import get_server_id

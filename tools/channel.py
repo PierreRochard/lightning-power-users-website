@@ -1,4 +1,4 @@
-from tools.lnd_client import lnd_remote_client
+from lnd_grpc import lnd_grpc
 
 
 class Channel(object):
@@ -12,7 +12,7 @@ class Channel(object):
         self.data = kwargs
         self.info = None
         if chan_id is not None and not self.data.get('close_height', False):
-            self.info = lnd_remote_client.get_chan_info(chan_id)
+            self.info = lnd_grpc.Client().get_chan_info(chan_id)
         self.remote_pubkey = remote_pubkey
         if remote_pubkey is None and self.info is not None:
             raise Exception()

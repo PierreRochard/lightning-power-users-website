@@ -6,7 +6,7 @@ from flask import Flask, redirect, url_for
 from flask_admin import Admin
 from flask_qrcode import QRcode
 
-from website.extensions import cache
+from website.extensions import cache, lnd, bitcoind
 from website.views.home_view import HomeView
 from website.models import Channels, PendingChannels
 from website.views.pending_channels_model_view import PendingChannelsModelView
@@ -36,6 +36,8 @@ class App(Flask):
             logger_factory=structlog.stdlib.LoggerFactory(),
         )
 
+        bitcoind.init_app(self)
+        lnd.init_app(self)
         cache.init_app(self)
         QRcode(self)
         self.debug = False
