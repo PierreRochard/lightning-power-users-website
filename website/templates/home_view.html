@@ -5,37 +5,13 @@
 
 
 {% block body %}
-    <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
-
-    <script type="text/javascript" charset="utf-8">
-        const user_websocket = new WebSocket("{{ WEBSOCKET_HOST }}");
-        const user_id = "{{ session['user_id'] }}";
-        document.addEventListener('DOMContentLoaded', function () {
-            user_websocket.onopen = function (event) {
-                const user_id_object = {
-                    user_id: user_id,
-                    action: 'open'
-                };
-                const user_id_string = JSON.stringify(user_id_object);
-                user_websocket.send(user_id_string);
-            };
-            user_websocket.onmessage = function (event) {
-                console.log(event.data);
-            };
-
-            function connectFormSubmit(event) {
-                event.preventDefault();
-                const form_data = $(this).serialize();
-                console.log(form_data);
-                user_websocket.send(form_data)
-            }
-            const connectForm = document.getElementById('connect_form');
-            connectForm.onsubmit = connectFormSubmit;
-
-        }, false);
-
-
-    </script>
+    <script type="module" src="https://code.jquery.com/jquery-1.10.2.js"></script>
+    <script
+            type="module"
+            src="https://unpkg.com/webln@0.1.0/dist/webln.min.js"
+            integrity="sha384-KbiwDLn7g4wD+1fs5EA/1c6p4Zzy0u8RwWObPvI+ty1WpALihdyvjF7/yKJzJk/I" crossorigin="anonymous"
+    ></script>
+    <script src="{{ url_for('static',filename='js/app.js') }}" type="module"></script>
     <div class="album py-5">
         <div class="container">
             <div class="row">
