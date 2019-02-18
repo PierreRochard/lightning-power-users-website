@@ -1,5 +1,7 @@
 import json
 
+from website.logger import log
+
 
 class User(object):
     def __init__(self, ws):
@@ -15,7 +17,12 @@ class Users(object):
         self.users = {}
 
     async def register(self, user_id: str, websocket):
-        self.users[user_id] = User(websocket)
+        if user_id not in self.users:
+            log.info(
+                'Registering user_id',
+                user_id=user_id
+            )
+            self.users[user_id] = User(websocket)
 
     async def unregister(self, user_id: str):
         del self.users[user_id]
