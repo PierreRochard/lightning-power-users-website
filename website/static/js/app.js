@@ -1,6 +1,4 @@
-import { requestProvider } from "/webln/lib/client";
-const user_websocket = new WebSocket("{{ WEBSOCKET_HOST }}");
-const user_id = "{{ session['user_id'] }}";
+
 document.addEventListener('DOMContentLoaded', async function () {
     user_websocket.onopen = function (event) {
         const user_id_object = {
@@ -23,22 +21,6 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     const connectForm = document.getElementById('connect_form');
     connectForm.onsubmit = connectFormSubmit;
-
-
-    let webln;
-    try {
-        webln = await requestProvider();
-    } catch (err) {
-        console.log(err);
-        // Handle users without WebLN
-    }
-
-// Elsewhere in the code...
-    if (webln) {
-        webln.enable();
-        // Call webln functions
-    }
-
 
 }, false);
 

@@ -5,13 +5,12 @@
 
 
 {% block body %}
-    <script type="module" src="https://code.jquery.com/jquery-1.10.2.js"></script>
-    <script
-            type="module"
-            src="https://unpkg.com/webln@0.1.0/dist/webln.min.js"
-            integrity="sha384-KbiwDLn7g4wD+1fs5EA/1c6p4Zzy0u8RwWObPvI+ty1WpALihdyvjF7/yKJzJk/I" crossorigin="anonymous"
-    ></script>
-    <script src="{{ url_for('static',filename='js/app.js') }}" type="module"></script>
+    <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+    <script>
+        const user_websocket = new WebSocket("{{ WEBSOCKET_HOST }}");
+        const user_id = "{{ session['user_id'] }}";
+    </script>
+    <script src="{{ url_for('static',filename='js/app.js') }}"></script>
     <div class="album py-5">
         <div class="container">
             <div class="row">
