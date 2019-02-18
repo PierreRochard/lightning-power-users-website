@@ -125,3 +125,4 @@ pip-selfcheck.json
 /website/package-lock.json
 /website/webpack.config.js
 !/website/assets/scripts/
+/website/static/gen/
