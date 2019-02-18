@@ -6,9 +6,8 @@ from google.protobuf.json_format import MessageToDict
 
 from lnd_grpc import lnd_grpc
 from website.logger import log
+from websocket.constants import DEFAULT_WEBSOCKET_URL
 from websocket.utilities import get_server_id
-
-DEFAULT_WEBSOCKET_URL = 'ws://localhost:8765'
 
 
 class InvoiceEmitter(object):

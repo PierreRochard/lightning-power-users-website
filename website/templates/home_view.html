@@ -1,0 +1,42 @@
+{% extends 'admin/base.html' %}
+
+{% import 'macros/home_view/joule_macro.html' as j %}
+{% import 'macros/home_view/connect_macro.html' as c %}
+
+
+{% block body %}
+    <script>
+        var clipboard = new ClipboardJS('.btn');
+    </script>
+
+    <script type="text/javascript" charset="utf-8">
+        var user_websocket = new WebSocket("{{ WEBSOCKET_HOST }}");
+        user_websocket.onopen = function (event) {
+            const user_id = "{{ session['user_id'] }}";
+            const user_id_object = JSON.stringify({user_id: user_id});
+            user_websocket.send(user_id_object);
+        };
+        user_websocket.onmessage = function (event) {
+            console.log(event.data);
+            const cardBody = document.querySelector('body > div.album.py-5 > div > div > div > div > div > div > div.form-group');
+            if (cardBody) {
+                cardBody.className += cardBody.className ? ' paid' : 'paid';
+            }
+        }
+    </script>
+    <div class="album py-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-1"></div>
+                <div class="col-lg-4">
+                    {{ j.joule() }}
+                </div>
+                <div class="col-lg-6">
+                    {{ c.connect() }}
+                </div>
+                <div class="col-lg-1"></div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

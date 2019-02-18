@@ -38,7 +38,7 @@ class MainServer(object):
                 data_string_from_client=data_string_from_client
             )
             return
-        if server_id not in [
+        if server_id is not None and server_id not in [
             get_server_id('main'),
             get_server_id('invoices'),
             get_server_id('channels'),
@@ -60,6 +60,10 @@ class MainServer(object):
 
         # User registration
         if user_id and not server_id:
+            log.info(
+                'Registering user_id',
+                user_id=user_id
+            )
             await self.users.register(
                 user_id=user_id,
                 websocket=websocket
