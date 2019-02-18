@@ -68,7 +68,10 @@ class MainServer(object):
                 user_id=user_id,
                 websocket=websocket
             )
-            return
+            while True:
+                data_string_from_client = await websocket.recv()
+                log.debug('message from client', message_from_client=data_string_from_client)
+
 
         # Server action dispatching
         data_from_server = data_from_client

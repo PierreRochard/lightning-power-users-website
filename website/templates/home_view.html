@@ -5,24 +5,36 @@
 
 
 {% block body %}
-    <script>
-        var clipboard = new ClipboardJS('.btn');
-    </script>
+    <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
 
     <script type="text/javascript" charset="utf-8">
-        var user_websocket = new WebSocket("{{ WEBSOCKET_HOST }}");
-        user_websocket.onopen = function (event) {
-            const user_id = "{{ session['user_id'] }}";
-            const user_id_object = JSON.stringify({user_id: user_id});
-            user_websocket.send(user_id_object);
-        };
-        user_websocket.onmessage = function (event) {
-            console.log(event.data);
-            const cardBody = document.querySelector('body > div.album.py-5 > div > div > div > div > div > div > div.form-group');
-            if (cardBody) {
-                cardBody.className += cardBody.className ? ' paid' : 'paid';
+        const user_websocket = new WebSocket("{{ WEBSOCKET_HOST }}");
+        const user_id = "{{ session['user_id'] }}";
+        document.addEventListener('DOMContentLoaded', function () {
+            user_websocket.onopen = function (event) {
+                const user_id_object = {
+                    user_id: user_id,
+                    action: 'open'
+                };
+                const user_id_string = JSON.stringify(user_id_object);
+                user_websocket.send(user_id_string);
+            };
+            user_websocket.onmessage = function (event) {
+                console.log(event.data);
+            };
+
+            function connectFormSubmit(event) {
+                event.preventDefault();
+                const form_data = $(this).serialize();
+                console.log(form_data);
+                user_websocket.send(form_data)
             }
-        }
+            const connectForm = document.getElementById('connect_form');
+            connectForm.onsubmit = connectFormSubmit;
+
+        }, false);
+
+
     </script>
     <div class="album py-5">
         <div class="container">
