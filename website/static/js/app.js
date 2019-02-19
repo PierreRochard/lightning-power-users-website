@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         event.preventDefault();
         const form_data = $(this).serialize();
         console.log(form_data);
-        const formData = JSON.parse(JSON.stringify(jQuery('#connect_form').serialize()));
+        const formData = JSON.parse(JSON.stringify(jQuery('#connect_form').serializeArray()));
         const connectFormDataObject = {
             user_id: user_id,
             action: 'connect',

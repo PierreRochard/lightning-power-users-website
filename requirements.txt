@@ -7,9 +7,11 @@ flask-wtf
 Frozen-Flask
 google-api-python-client
 humanize
+jsmin
 networkx
 oauth2client
 python-bitcoinlib
 requests
 structlog
+webassets
 websockets

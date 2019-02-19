@@ -4,6 +4,8 @@ from uuid import UUID
 
 import websockets
 
+from lnd_grpc import lnd_grpc
+from lnd_grpc.lnd_grpc import Client
 from website.logger import log
 from websocket.models.channel_opening_invoices import ChannelOpeningInvoices
 from websocket.models.users import Users
@@ -11,9 +13,20 @@ from websocket.utilities import get_server_id
 
 
 class MainServer(object):
-    def __init__(self):
+    rpc: Client
+
+    def __init__(self, lnd_dir: str = None,
+                 lnd_network: str = 'mainnet',
+                 lnd_grpc_host: str = 'localhost',
+                 lnd_grpc_port: str = '10011'):
+        self.rpc = lnd_grpc.Client(
+            lnd_dir=lnd_dir,
+            network=lnd_network,
+            grpc_host=lnd_grpc_host,
+            grpc_port=lnd_grpc_port,
+        )
         self.channel_opening_invoices = ChannelOpeningInvoices()
-        self.users = Users()
+        self.users = Users(self.rpc)
         self.channel_opening_server = None
 
     async def run(self, websocket, path):
@@ -68,63 +81,15 @@ class MainServer(object):
                 if data_from_client.get('action', None) == 'connect':
                     log.debug('connect', data_from_client=data_from_client)
                     form_data = data_from_client.get('form_data', None)
-                    if not len(form_data) or not isinstance(form_data, list):
-                        continue
-                    pubkey = form_data[0].get('pubkey', '').strip()
-                    if not pubkey:
-                        continue
-                    # PubKey processing
-                    pubkey = pubkey.strip()
-                    if not pubkey:
+                    form_data_pubkey = [f for f in form_data if f['name'] == 'pubkey'][0]
+                    if not len(form_data_pubkey):
                         log.debug(
-                            'request-capacity.process_request no pubkey provided',
-                            pub_key_data=pub_key_data
+                            'Connect did not include valid form data',
+                            data_from_client=data_from_client
                         )
-                        flash('Error: please enter your PubKey', category='danger')
-                        return redirect(url_for('request-capacity.index'))
-
-                    if '@' in pub_key_data:
-                        try:
-                            pub_key, ip_address = pub_key_data.split('@')
-                            log.debug('Parsed host', ip_address=ip_address)
-                        except ValueError:
-                            log.debug(
-                                'request-capacity.process_request invalid pubkey format',
-                                pub_key_data=pub_key_data
-                            )
-                            flash('Error: invalid PubKey format', category='danger')
-                            return redirect(url_for('request-capacity.index'))
-                    else:
-                        pub_key = pub_key_data
-                        ip_address = None
-
-                    if len(pub_key) != 66:
-                        flash('Error: invalid PubKey length, expected 66 characters',
-                              category='danger')
-                        return redirect(url_for('request-capacity.index'))
-
-                    # Connect to peer
-
-                    if ip_address is not None:
-                        try:
-                            lnd.rpc.connect_peer(pub_key, ip_address)
-                        except _Rendezvous as e:
-                            details = e.details()
-                            if 'already connected to peer' in details:
-                                pass
-                            else:
-                                flash(f'Error: {details}', category='danger')
-                                log.error('request-capacity.process_request POST',
-                                          data=form_data, details=details)
-                                return redirect(url_for('request-capacity.index'))
-                    else:
-                        peers = lnd.rpc.list_peers()
-                        try:
-                            peer = [p for p in peers if p.pub_key == pub_key][0]
-                        except IndexError:
-                            flash('Error: unknown PubKey, please provide pubkey@host:port',
-                                  category='danger')
-                            return redirect(url_for('request-capacity.index'))
+                        continue
+                    pubkey = form_data_pubkey.get('value', '').strip()
+                    await self.users.process_pubkey(user_id, pubkey)
 
                 continue
 
@@ -180,7 +145,8 @@ class MainServer(object):
                 self.channel_opening_server = websocket
                 message = {
                     'error': data_from_server.get('error', None),
-                    'open_channel_update': data_from_server.get('open_channel_update', None)
+                    'open_channel_update': data_from_server.get(
+                        'open_channel_update', None)
                 }
                 await self.users.send(
                     user_id=user_id,

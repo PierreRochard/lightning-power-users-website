@@ -1,1 +1,3 @@
 DEFAULT_WEBSOCKET_URL = 'ws://localhost:8765'
+
+PUBKEY_LENGTH = 66
