@@ -27,9 +27,7 @@ class User(object):
             data = None
         else:
             data = {
-                'channel_count': len(channels),
-                'outbound_capacity': sum([c.remote_balance for c in channels]),
-                'inbound_capacity': sum([c.local_balance for c in channels])
+                'channel_count': len(channels)
             }
         message = {
             'action': 'connected',
