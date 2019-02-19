@@ -133,7 +133,7 @@ class Users(object):
             except _Rendezvous as e:
                 details = e.details()
                 if 'already connected to peer' in details:
-                    log.debug('Connected to peer',
+                    log.debug('Already connected to peer',
                               remote_pubkey=remote_pubkey)
                     message = {
                         'action': 'connected'
