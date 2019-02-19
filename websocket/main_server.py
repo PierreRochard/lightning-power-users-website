@@ -89,7 +89,7 @@ class MainServer(object):
                         )
                         continue
                     pubkey = form_data_pubkey.get('value', '').strip()
-                    await self.users.process_pubkey(user_id, pubkey)
+                    await self.users.connect_to_peer(user_id, pubkey)
 
                 continue
 

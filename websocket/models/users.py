@@ -11,16 +11,29 @@ from websocket.constants import PUBKEY_LENGTH
 
 
 class User(object):
-    def __init__(self, ws):
+    def __init__(self, ws, rpc):
         self.ws = ws
+        self.rpc: Client = rpc
 
     async def send(self, message):
         message_string = json.dumps(message)
         await self.ws.send(message_string)
 
     async def send_connected(self, remote_pubkey: str):
+        channels = self.rpc.list_channels(public_only=True)
+        channels = [c for c in channels
+                    if c.remote_pubkey == remote_pubkey]
+        if not channels:
+            data = None
+        else:
+            data = {
+                'channel_count': len(channels),
+                'outbound_capacity': sum([c.remote_balance for c in channels]),
+                'inbound_capacity': sum([c.local_balance for c in channels])
+            }
         message = {
-            'action': 'connected'
+            'action': 'connected',
+            'data': data
         }
         await self.send(message=message)
         pass
@@ -46,7 +59,7 @@ class Users(object):
                 'Registering user_id',
                 user_id=user_id
             )
-            self.connections[user_id] = User(websocket)
+            self.connections[user_id] = User(websocket, self.rpc)
 
     async def unregister(self, user_id: str):
         del self.connections[user_id]
@@ -57,7 +70,7 @@ class Users(object):
             return
         await user.send(message)
 
-    async def process_pubkey(self, user_id: str, remote_pubkey_input: str):
+    async def connect_to_peer(self, user_id: str, remote_pubkey_input: str):
         logger = get_logger()
         log_user = logger.bind(user_id=user_id)
         user_websocket: User = self.connections[user_id]
