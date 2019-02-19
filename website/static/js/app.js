@@ -16,10 +16,11 @@ document.addEventListener('DOMContentLoaded', async function () {
         event.preventDefault();
         const form_data = $(this).serialize();
         console.log(form_data);
+        const formData = JSON.parse(JSON.stringify(jQuery('#connect_form').serialize()));
         const connectFormDataObject = {
             user_id: user_id,
             action: 'connect',
-            form_data: form_data
+            form_data: formData
         };
         const connectFormDataString = JSON.stringify(connectFormDataObject);
 

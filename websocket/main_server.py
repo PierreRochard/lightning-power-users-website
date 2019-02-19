@@ -67,6 +67,64 @@ class MainServer(object):
                 )
                 if data_from_client.get('action', None) == 'connect':
                     log.debug('connect', data_from_client=data_from_client)
+                    form_data = data_from_client.get('form_data', None)
+                    if not len(form_data) or not isinstance(form_data, list):
+                        continue
+                    pubkey = form_data[0].get('pubkey', '').strip()
+                    if not pubkey:
+                        continue
+                    # PubKey processing
+                    pubkey = pubkey.strip()
+                    if not pubkey:
+                        log.debug(
+                            'request-capacity.process_request no pubkey provided',
+                            pub_key_data=pub_key_data
+                        )
+                        flash('Error: please enter your PubKey', category='danger')
+                        return redirect(url_for('request-capacity.index'))
+
+                    if '@' in pub_key_data:
+                        try:
+                            pub_key, ip_address = pub_key_data.split('@')
+                            log.debug('Parsed host', ip_address=ip_address)
+                        except ValueError:
+                            log.debug(
+                                'request-capacity.process_request invalid pubkey format',
+                                pub_key_data=pub_key_data
+                            )
+                            flash('Error: invalid PubKey format', category='danger')
+                            return redirect(url_for('request-capacity.index'))
+                    else:
+                        pub_key = pub_key_data
+                        ip_address = None
+
+                    if len(pub_key) != 66:
+                        flash('Error: invalid PubKey length, expected 66 characters',
+                              category='danger')
+                        return redirect(url_for('request-capacity.index'))
+
+                    # Connect to peer
+
+                    if ip_address is not None:
+                        try:
+                            lnd.rpc.connect_peer(pub_key, ip_address)
+                        except _Rendezvous as e:
+                            details = e.details()
+                            if 'already connected to peer' in details:
+                                pass
+                            else:
+                                flash(f'Error: {details}', category='danger')
+                                log.error('request-capacity.process_request POST',
+                                          data=form_data, details=details)
+                                return redirect(url_for('request-capacity.index'))
+                    else:
+                        peers = lnd.rpc.list_peers()
+                        try:
+                            peer = [p for p in peers if p.pub_key == pub_key][0]
+                        except IndexError:
+                            flash('Error: unknown PubKey, please provide pubkey@host:port',
+                                  category='danger')
+                            return redirect(url_for('request-capacity.index'))
 
                 continue
 
