@@ -3,6 +3,7 @@ import json
 # noinspection PyProtectedMember
 from google.protobuf.json_format import MessageToDict
 from grpc._channel import _Rendezvous
+from structlog import get_logger
 
 from lnd_grpc.lnd_grpc import Client
 from website.logger import log
@@ -16,6 +17,20 @@ class User(object):
     async def send(self, message):
         message_string = json.dumps(message)
         await self.ws.send(message_string)
+
+    async def send_connected(self, remote_pubkey: str):
+        message = {
+            'action': 'connected'
+        }
+        await self.send(message=message)
+        pass
+
+    async def send_error(self, error: str):
+        message = {
+            'error': error,
+            'category': 'danger'
+        }
+        await self.send(message=message)
 
 
 class Users(object):
@@ -40,114 +55,93 @@ class Users(object):
         user = self.connections.get(user_id, None)
         if user is None:
             return
-        await user.send(json.dumps(message))
+        await user.send(message)
 
     async def process_pubkey(self, user_id: str, remote_pubkey_input: str):
+        logger = get_logger()
+        log_user = logger.bind(user_id=user_id)
+        user_websocket: User = self.connections[user_id]
         remote_pubkey = remote_pubkey_input.strip()
         if not remote_pubkey:
-            log.debug(
+            log_user.debug(
                 'Pressed connect button but no remote_pubkey found',
-                user_id=user_id,
                 remote_pubkey_input=remote_pubkey_input
             )
-            message = {
-                'error': 'Please enter your PubKey',
-                'category': 'danger'
-            }
-            await self.send(user_id=user_id, message=message)
+            await user_websocket.send_error('Please enter your PubKey')
             return
 
         full_remote_pubkey = remote_pubkey
         if '@' in remote_pubkey:
+            # noinspection PyBroadException
             try:
                 remote_pubkey, remote_host = remote_pubkey.split('@')
-                log.debug('Parsed host', remote_host=remote_host)
+                log_user.debug('Parsed host', remote_host=remote_host)
             except:
-                log.error('Invalid PubKey format', remote_pubkey=remote_pubkey,
-                          exc_info=True)
-                message = {
-                    'error': 'Invalid PubKey format',
-                    'category': 'danger'
-                }
-                await self.send(user_id=user_id, message=message)
+                log_user.error('Invalid PubKey format',
+                               remote_pubkey=remote_pubkey,
+                               exc_info=True)
+                await user_websocket.send_error('Invalid PubKey format')
                 return
         else:
             remote_host = None
 
         if len(remote_pubkey) != PUBKEY_LENGTH:
-            log.error('Invalid PubKey length', pubkey=remote_pubkey)
-            message = {
-                'error': f'Invalid PubKey length, expected {PUBKEY_LENGTH} characters',
-                'category': 'danger'
-            }
-            await self.send(user_id=user_id, message=message)
+            log_user.error('Invalid PubKey length', pubkey=remote_pubkey)
+            await user_websocket.send_error(
+                f'Invalid PubKey length, expected {PUBKEY_LENGTH} characters'
+            )
             return
 
         # Connect to peer
         if remote_host is None:
+            # noinspection PyBroadException
             try:
+                # Check if we're already connected
                 peers = self.rpc.list_peers()
             except:
-                log.error(
+                log_user.error(
                     'Error with list_peers rpc',
                     exc_info=True
                 )
-                message = {
-                    'error': 'Error: please refresh and try again',
-                    'category': 'danger'
-                }
-                await self.send(user_id=user_id, message=message)
+                await user_websocket.send_error('Error: please refresh and try again')
                 return
 
             try:
                 peer = [p for p in peers if p.pub_key == remote_pubkey][0]
-                log.debug('Already connected to peer',
-                          remote_pubkey=remote_pubkey,
-                          peer=MessageToDict(peer))
-                message = {
-                    'action': 'connected'
-                }
-                await self.send(user_id=user_id, message=message)
+                log_user.debug('Already connected to peer',
+                               remote_pubkey=remote_pubkey,
+                               peer=MessageToDict(peer))
+                await user_websocket.send_connected(remote_pubkey=remote_pubkey)
                 return
             except IndexError:
-                message = {
-                    'error': 'Unknown PubKey, please provide pubkey@host:port',
-                    'category': 'danger'
-                }
-                log.debug('Unknown PubKey, please provide pubkey@host:port',
-                          pubkey=remote_pubkey,
-                          exc_info=True)
-                await self.send(user_id=user_id, message=message)
+                log_user.debug(
+                    'Unknown PubKey, please provide pubkey@host:port',
+                    pubkey=remote_pubkey,
+                    exc_info=True)
+                await user_websocket.send_error(
+                    'Unknown PubKey, please provide pubkey@host:port'
+                )
                 return
         else:
             try:
                 self.rpc.connect(address=full_remote_pubkey)
-                log.debug('Connected to peer',
-                          remote_pubkey=remote_pubkey)
-                message = {
-                    'action': 'connected'
-                }
-                await self.send(user_id=user_id, message=message)
+                log_user.debug('Connected to peer',
+                               remote_pubkey=remote_pubkey)
+                await user_websocket.send_connected(remote_pubkey=remote_pubkey)
                 return
 
             except _Rendezvous as e:
                 details = e.details()
                 if 'already connected to peer' in details:
-                    log.debug('Already connected to peer',
-                              remote_pubkey=remote_pubkey)
-                    message = {
-                        'action': 'connected'
-                    }
-                    await self.send(user_id=user_id, message=message)
+                    log_user.debug('Already connected to peer',
+                                   remote_pubkey=remote_pubkey)
+                    await user_websocket.send_connected(remote_pubkey=remote_pubkey)
                     return
                 else:
-                    message = {
-                        'error': f'Error: {details}',
-                        'category': 'danger'
-                    }
-                    log.error('connect_peer', pubkey=remote_pubkey,
-                              remote_host=remote_host,
-                              details=details,
-                              exc_info=True)
-                    await self.send(user_id=user_id, message=message)
+                    log_user.error('connect_peer',
+                                   remote_pubkey=remote_pubkey,
+                                   remote_host=remote_host,
+                                   details=details,
+                                   exc_info=True)
+                    await user_websocket.send_error(f'Error: {details}')
                     return
