@@ -23,11 +23,22 @@ class MyDefaultDict(defaultdict):
 class NodeOperator(object):
     nodes: Dict[str, Node]
 
-    def __init__(self):
+    def __init__(self,
+                 lnd_dir: str = None,
+                 lnd_network: str = 'mainnet',
+                 lnd_grpc_host: str = 'localhost',
+                 lnd_grpc_port: str = '10011'):
+
+        self.rpc = lnd_grpc.Client(
+            lnd_dir=lnd_dir,
+            network=lnd_network,
+            grpc_host=lnd_grpc_host,
+            grpc_port=lnd_grpc_port,
+        )
+        self.lnd_client = lnd_grpc.Client()
         self.nodes = MyDefaultDict(Node)
         self.get_channels()
         self.get_peers()
-        self.lnd_client = lnd_grpc.Client()
 
     def get_channels(self):
         channels = self.lnd_client.list_channels()
