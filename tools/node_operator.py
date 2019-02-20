@@ -26,30 +26,33 @@ class NodeOperator(object):
     def __init__(self,
                  lnd_dir: str = None,
                  lnd_network: str = 'mainnet',
-                 lnd_grpc_host: str = 'localhost',
-                 lnd_grpc_port: str = '10011'):
+                 lnd_grpc_host: str = '127.0.0.1',
+                 lnd_grpc_port: str = '10009',
+                 macaroon_path: str = None,
+                 tls_cert_path: str = None):
 
         self.rpc = lnd_grpc.Client(
             lnd_dir=lnd_dir,
             network=lnd_network,
             grpc_host=lnd_grpc_host,
             grpc_port=lnd_grpc_port,
+            macaroon_path=macaroon_path,
+            tls_cert_path=tls_cert_path
         )
-        self.lnd_client = lnd_grpc.Client()
         self.nodes = MyDefaultDict(Node)
         self.get_channels()
         self.get_peers()
 
     def get_channels(self):
-        channels = self.lnd_client.list_channels()
+        channels = self.rpc.list_channels()
         [self.nodes[m.remote_pubkey].add_channel(Channel(**MessageToDict(m)))
          for m in channels]
 
-        pending_channels = [c for c in self.lnd_client.pending_channels()]
+        pending_channels = [c for c in self.rpc.pending_channels()]
         [self.nodes[m.remote_node_pub].add_channel(Channel(**m))
          for m in pending_channels]
 
-        closed_channels = [c for c in self.lnd_client.closed_channels()]
+        closed_channels = [c for c in self.rpc.closed_channels()]
         [self.nodes[m.remote_pubkey].add_channel(Channel(**MessageToDict((m))))
          for m in closed_channels]
 
@@ -61,7 +64,7 @@ class NodeOperator(object):
         )
 
     def get_peers(self):
-        peers = self.lnd_client.list_peers()
+        peers = self.rpc.list_peers()
         log.debug(
             'Got peers',
             peers=len(peers)
@@ -85,7 +88,7 @@ class NodeOperator(object):
                 if ip_address in address['addr']:
                     for channel in node.channels:
                         force = not channel.is_active
-                        txid = self.lnd_client.close_channel(
+                        txid = self.rpc.close_channel(
                             channel_point=channel.channel_point,
                             force=force,
                             sat_per_byte=1
@@ -144,9 +147,24 @@ if __name__ == '__main__':
         type=int
     )
 
+    parser.add_argument(
+        '--macaroon',
+        '-m',
+        type=str
+    )
+
+    parser.add_argument(
+        '--tls',
+        '-t',
+        type=str
+    )
+
     args = parser.parse_args()
 
-    node_operator = NodeOperator()
+    node_operator = NodeOperator(
+        macaroon_path=args.macaroon,
+        tls_cert_path=args.tls
+    )
 
     if args.action == 'close' and args.ip_address:
         node_operator.close_channels(ip_address=args.ip_address)
