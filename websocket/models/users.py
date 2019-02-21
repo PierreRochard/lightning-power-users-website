@@ -1,7 +1,7 @@
 import json
 
-# noinspection PyProtectedMember
 from google.protobuf.json_format import MessageToDict
+# noinspection PyProtectedMember
 from grpc._channel import _Rendezvous
 from structlog import get_logger
 
@@ -52,12 +52,11 @@ class Users(object):
         self.connections = {}
 
     async def register(self, user_id: str, websocket):
-        if user_id not in self.connections:
-            log.info(
-                'Registering user_id',
-                user_id=user_id
-            )
-            self.connections[user_id] = User(websocket, self.rpc)
+        log.info(
+            'Registering user_id',
+            user_id=user_id
+        )
+        self.connections[user_id] = User(websocket, self.rpc)
 
     async def unregister(self, user_id: str):
         del self.connections[user_id]
