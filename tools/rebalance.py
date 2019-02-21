@@ -28,7 +28,7 @@ def rebalance(self):
                 print(node.pubkey, f'{rebalance_amount:,d}',
                       node.peer_info.get('sat_recv'),
                       node.peer_info.get('sat_sent'))
-                response = lnd_grpc.Client().open_channel(
+                response = self.rpc.open_channel(
                     node_pubkey_string=node.pubkey,
                     local_funding_amount=rebalance_amount, push_sat=0,
                     sat_per_byte=5)

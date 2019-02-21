@@ -53,7 +53,7 @@ def get_google_sheet_data(node_operator):
                 if len(node.channels) == 1 and node.remote_balance:
                     total += node.capacity
                     print(node.pubkey, "{0:,d}".format(node.capacity))
-                    response = lnd_grpc.Client().open_channel(
+                    response = self.rpc.open_channel(
                         node_pubkey_string=node.pubkey,
                         local_funding_amount=max(node.capacity, 200000),
                         push_sat=0,

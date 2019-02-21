@@ -6,6 +6,7 @@ from google.protobuf.json_format import MessageToDict
 from grpc._channel import _Rendezvous
 
 from lnd_grpc import lnd_grpc
+from lnd_grpc.lnd_grpc import Client
 from website.logger import log
 from tools.channel import Channel
 
@@ -14,15 +15,17 @@ class Node(object):
     info: dict
     peer_info: dict
     channels: List[Channel]
+    rpc: Client
 
-    def __init__(self, pubkey: str):
+    def __init__(self, rpc: Client, pubkey: str):
+        self.rpc = rpc
         self.pubkey = pubkey
         self.channels = []
         self.peer_info = None
         self.info = None
         self.state = None
         try:
-            self.info = MessageToDict(lnd_grpc.Client().get_node_info(pubkey))
+            self.info = MessageToDict(self.rpc.get_node_info(pubkey))
             self.state = 'online'
         except _Rendezvous as e:
             details = e.details().lower()
@@ -45,7 +48,7 @@ class Node(object):
         )
         for address in self.info['node'].get('addresses', []):
             try:
-                lnd_grpc.Client().connect_peer(self.pubkey,
+                self.rpc.connect_peer(self.pubkey,
                                                address['addr'],
                                                timeout=5)
                 log.info(

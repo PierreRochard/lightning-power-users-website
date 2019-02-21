@@ -15,8 +15,13 @@ from tools.node import Node
 
 
 class MyDefaultDict(defaultdict):
+
+    def __init__(self, rpc, node, **kwargs):
+        super().__init__(node, **kwargs)
+        self.rpc = rpc
+
     def __missing__(self, key):
-        self[key] = new = self.default_factory(key)
+        self[key] = new = self.default_factory(self.rpc, key)
         return new
 
 
@@ -39,21 +44,24 @@ class NodeOperator(object):
             macaroon_path=macaroon_path,
             tls_cert_path=tls_cert_path
         )
-        self.nodes = MyDefaultDict(Node)
+        self.nodes = MyDefaultDict(self.rpc, Node)
         self.get_channels()
         self.get_peers()
 
     def get_channels(self):
         channels = self.rpc.list_channels()
-        [self.nodes[m.remote_pubkey].add_channel(Channel(**MessageToDict(m)))
+        [self.nodes[m.remote_pubkey].add_channel(Channel(self.rpc,
+                                                         **MessageToDict(m)))
          for m in channels]
 
-        pending_channels = [c for c in self.rpc.pending_channels()]
-        [self.nodes[m.remote_node_pub].add_channel(Channel(**m))
+        pending_channels = [c for c in self.rpc.list_pending_channels()]
+        [self.nodes[m.remote_node_pub].add_channel(Channel(self.rpc,
+                                                           **m))
          for m in pending_channels]
 
         closed_channels = [c for c in self.rpc.closed_channels()]
-        [self.nodes[m.remote_pubkey].add_channel(Channel(**MessageToDict((m))))
+        [self.nodes[m.remote_pubkey].add_channel(Channel(self.rpc,
+                                                         **MessageToDict(m)))
          for m in closed_channels]
 
         log.debug(
@@ -126,7 +134,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--ip_address',
         '-i',
-        type=str
+        type=str,
+        help='The IP address of the peer that you want to force close channels on'
     )
 
     parser.add_argument(
@@ -159,9 +168,25 @@ if __name__ == '__main__':
         type=str
     )
 
+    parser.add_argument(
+        '--port',
+        type=str,
+        help='Port for gRPC',
+        default='10009'
+    )
+
+    parser.add_argument(
+        '--host',
+        type=str,
+        help='Host IP address for gRPC',
+        default='127.0.0.1'
+    )
+
     args = parser.parse_args()
 
     node_operator = NodeOperator(
+        lnd_grpc_host=args.host,
+        lnd_grpc_port=args.port,
         macaroon_path=args.macaroon,
         tls_cert_path=args.tls
     )

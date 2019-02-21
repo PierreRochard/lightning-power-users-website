@@ -29,7 +29,7 @@ def save_to_csv(name: str, data: List[dict]):
 class LightningGraph(object):
     def __init__(self, pubkey: str):
         self.pubkey = pubkey
-        self.lnd_client = lnd_grpc.Client()
+        self.lnd_client = self.rpc
         self.node_operator = NodeOperator()
         self.graph: ChannelGraph = self.lnd_client.describe_graph()
         self.nodes = convert_to_dict(self.graph.nodes)
@@ -71,7 +71,7 @@ class LightningGraph(object):
                 )
                 continue
 
-            response = lnd_grpc.Client().open_channel(
+            response = self.rpc.open_channel(
                 node_pubkey_string=node.pubkey,
                 local_funding_amount=max(1000000, node.remote_balance),
                 push_sat=0,
