@@ -5,7 +5,6 @@ from google.protobuf.json_format import MessageToDict
 # noinspection PyProtectedMember
 from grpc._channel import _Rendezvous
 
-from lnd_grpc import lnd_grpc
 from lnd_grpc.lnd_grpc import Client
 from website.logger import log
 from tools.channel import Channel
@@ -48,9 +47,7 @@ class Node(object):
         )
         for address in self.info['node'].get('addresses', []):
             try:
-                self.rpc.connect_peer(self.pubkey,
-                                               address['addr'],
-                                               timeout=5)
+                self.rpc.connect_peer(self.pubkey, address['addr'], timeout=5)
                 log.info(
                     'Successfully reconnected',
                     pubkey=self.pubkey,
