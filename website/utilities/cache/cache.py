@@ -17,7 +17,8 @@ def get_latest(name, date_time=None):
     directory = get_cache_directory_by_date(date_time)
     files = [f for f in os.listdir(directory) if name in f]
     try:
-        latest = max([f.split('-')[1].split('.')[0] for f in files])
+        hours = [int(f.split('-')[1].split('.')[0]) for f in files]
+        latest = max(hours)
     except ValueError:
         latest = 25
     if int(latest) != date_time.hour or latest is None:
@@ -31,6 +32,12 @@ def get_latest(name, date_time=None):
     file_path = os.path.join(directory, f'{name}-{latest}.json')
     with open(file_path, 'r') as f:
         data = json.load(f)
+        if name == 'fee_estimate':
+            fee_estimate_missing = [e.get('conservative') is None
+                                    or e.get('economical') is None for e in data]
+            if any(fee_estimate_missing):
+                cache_fee_estimate()
+                get_latest(name, date_time)
     return data
 
 def get_data(name, label):
