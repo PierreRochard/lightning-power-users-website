@@ -20,7 +20,7 @@ def get_latest(name, date_time=None):
         latest = max([f.split('-')[1].split('.')[0] for f in files])
     except ValueError:
         latest = 25
-    if int(latest) != date_time.hour:
+    if int(latest) != date_time.hour or latest is None:
         if name == 'usd_price':
             cache_usd_price()
         elif name == 'fee_estimate':
