@@ -1,0 +1,54 @@
+<ul class="nav nav-tabs" id="myTab" role="tablist">
+    <li class="nav-item">
+        <a
+                class="nav-link active"
+                id="connect-tab"
+                data-toggle="tab"
+                role="tab"
+                aria-controls="connect"
+                aria-selected="true">
+            1. Connect
+        </a>
+    </li>
+    <li class="nav-item">
+        <a
+                class="nav-link disabled"
+                id="capacity-tab"
+                data-toggle="tab"
+                role="tab"
+                aria-controls="capacity"
+                aria-selected="false"
+
+        >
+            2. Capacity
+        </a>
+    </li>
+    <li class="nav-item">
+        <a
+                class="nav-link disabled"
+                id="chain-tab"
+                data-toggle="tab"
+                role="tab"
+                aria-controls="chain"
+                aria-selected="false">
+            3. Chain Fee
+        </a>
+    </li>
+    <li class="nav-item">
+        <a
+                class="nav-link disabled"
+                id="contact-tab"
+                data-toggle="tab"
+                role="tab"
+                aria-controls="contact"
+                aria-selected="false">
+            4. Payment
+        </a>
+    </li>
+</ul>
+<div class="tab-content" id="myTabContent">
+    {% include 'home_view/blocks/capacity_request/connect.html' %}
+    {% include 'home_view/blocks/capacity_request/capacity_fee.html' %}
+    {% include 'home_view/blocks/capacity_request/chain_fee.html' %}
+    {% include 'home_view/blocks/capacity_request/payment.html' %}
+</div>

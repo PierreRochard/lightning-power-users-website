@@ -1,14 +1,11 @@
 {% extends 'admin/base.html' %}
 
-{% import 'macros/home_view/joule_macro.html' as j %}
-{% import 'macros/home_view/connect_macro.html' as c %}
-
 
 {% block body %}
-    <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
     <script>
         const user_websocket = new WebSocket("{{ WEBSOCKET_HOST }}");
         const user_id = "{{ session['user_id'] }}";
+        const pricePerSat = {{ price_per_sat }};
     </script>
     <script src="{{ url_for('static',filename='js/app.js') }}"></script>
     <div class="album py-5">
@@ -16,14 +13,13 @@
             <div class="row">
                 <div class="col-lg-1"></div>
                 <div class="col-lg-4">
-                    {{ j.joule() }}
+                    {% include 'home_view/blocks/joule.html' %}
                 </div>
                 <div class="col-lg-6">
-                    {{ c.connect() }}
+                    {% include 'home_view/blocks/capacity_request/capacity_request.html' %}
                 </div>
                 <div class="col-lg-1"></div>
             </div>
         </div>
     </div>
-
 {% endblock %}
