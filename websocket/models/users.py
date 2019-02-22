@@ -41,10 +41,10 @@ class User(object):
         }
         await self.send(message=message)
 
-    async def send_error(self, error: str):
+    async def send_connect_error(self, error: str):
         message = {
-            'error': error,
-            'category': 'danger'
+            'action': 'connect_error',
+            'error': error
         }
         await self.send(message=message)
 
@@ -83,7 +83,7 @@ class Users(object):
                 'Pressed connect button but no remote_pubkey found',
                 remote_pubkey_input=remote_pubkey_input
             )
-            await user_websocket.send_error('Please enter your PubKey')
+            await user_websocket.send_connect_error('Please enter your PubKey')
             return
 
         full_remote_pubkey = remote_pubkey
@@ -96,14 +96,14 @@ class Users(object):
                 log_user.error('Invalid PubKey format',
                                remote_pubkey=remote_pubkey,
                                exc_info=True)
-                await user_websocket.send_error('Invalid PubKey format')
+                await user_websocket.send_connect_error('Invalid PubKey format')
                 return
         else:
             remote_host = None
 
         if len(remote_pubkey) != PUBKEY_LENGTH:
             log_user.error('Invalid PubKey length', pubkey=remote_pubkey)
-            await user_websocket.send_error(
+            await user_websocket.send_connect_error(
                 f'Invalid PubKey length, expected {PUBKEY_LENGTH} characters'
             )
             return
@@ -119,7 +119,7 @@ class Users(object):
                     'Error with list_peers rpc',
                     exc_info=True
                 )
-                await user_websocket.send_error('Error: please refresh and try again')
+                await user_websocket.send_connect_error('Error: please refresh and try again')
                 return
 
             try:
@@ -134,7 +134,7 @@ class Users(object):
                     'Unknown PubKey, please provide pubkey@host:port',
                     pubkey=remote_pubkey,
                     exc_info=True)
-                await user_websocket.send_error(
+                await user_websocket.send_connect_error(
                     'Unknown PubKey, please provide pubkey@host:port'
                 )
                 return
@@ -159,5 +159,5 @@ class Users(object):
                                    remote_host=remote_host,
                                    details=details,
                                    exc_info=True)
-                    await user_websocket.send_error(f'Error: {details}')
+                    await user_websocket.send_connect_error(f'Error: {details}')
                     return

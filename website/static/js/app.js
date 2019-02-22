@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     const connectButton = document.getElementById('connect_button');
     const connectTextarea = document.getElementById('connect_textarea');
     const progressBar = document.getElementById('progress_bar');
+    const connectError = document.getElementById('connect_error');
 
     function websocketSend(data) {
         const data_string = JSON.stringify(data);
@@ -31,6 +32,15 @@ document.addEventListener('DOMContentLoaded', async function () {
                 progressBar.style.width = "100%";
                 progressBar.textContent = "";
                 break;
+            case "connect_error":
+                console.log("connect error");
+                progressBar.style.width = "0%";
+                progressBar.textContent = "";
+                connectError.style.visibility = "visible";
+                connectError.textContent = msg.error;
+                connectButton.disabled = false;
+                connectTextarea.disabled = false;
+
         }
     };
 
@@ -41,6 +51,10 @@ document.addEventListener('DOMContentLoaded', async function () {
         const formData = JSON.parse(JSON.stringify(jQuery('#connect_form').serializeArray()));
         connectButton.disabled = true;
         connectTextarea.disabled = true;
+
+        connectError.textContent = "";
+        connectError.style.visibility = "hidden";
+
         const connectFormDataObject = {
             user_id: user_id,
             action: 'connect',
