@@ -34,7 +34,12 @@ class User(object):
             'data': data
         }
         await self.send(message=message)
-        pass
+
+    async def send_registered(self):
+        message = {
+            'action': 'registered'
+        }
+        await self.send(message=message)
 
     async def send_error(self, error: str):
         message = {
@@ -57,6 +62,7 @@ class Users(object):
             user_id=user_id
         )
         self.connections[user_id] = User(websocket, self.rpc)
+        await self.connections[user_id].send_registered()
 
     async def unregister(self, user_id: str):
         del self.connections[user_id]

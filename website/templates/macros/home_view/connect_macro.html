@@ -11,12 +11,20 @@
                 <form id="connect_form" onsubmit="">
                     <div class="form-group">
                         <label for="pubkey"></label>
-                        <textarea class="form-control"  type="text" id="pubkey" name="pubkey" placeholder="Your PubKey"></textarea>
+                        <textarea
+                                class="form-control"
+                                type="text"
+                                id="connect_textarea"
+                                name="pubkey"
+                                placeholder="Your PubKey"></textarea>
                     </div>
                     <div class="text-center">
-                        <button class="btn btn-lg btn-success" type="submit">
+                        <button id="connect_button" class="btn btn-lg btn-success" type="submit">
                             Connect
                         </button>
+                        <div class="progress center-block" style="margin-top: 10px; width: 50%; margin-left: auto; margin-right:auto;">
+                            <div id="progress_bar" class="progress-bar progress-bar-striped progress-bar-animated " role="progressbar" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100" style="width: 0%;"></div>
+                        </div>
                     </div>
                 </form>
             </div>

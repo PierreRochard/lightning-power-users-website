@@ -74,11 +74,13 @@ class MainServer(object):
 
             # User registration
             if user_id and not server_id:
-                await self.users.register(
-                    user_id=user_id,
-                    websocket=websocket
-                )
-                if data_from_client.get('action', None) == 'connect':
+                action = data_from_client.get('action', None)
+                if action == 'register':
+                    await self.users.register(
+                        user_id=user_id,
+                        websocket=websocket
+                    )
+                elif action == 'connect':
                     log.debug('connect', data_from_client=data_from_client)
                     form_data = data_from_client.get('form_data', None)
                     form_data_pubkey = [f for f in form_data if f['name'] == 'pubkey'][0]
