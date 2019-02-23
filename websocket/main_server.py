@@ -74,26 +74,8 @@ class MainServer(object):
 
             # User registration
             if user_id and not server_id:
-                action = data_from_client.get('action', None)
-                if action == 'register':
-                    await self.users.register(
-                        user_id=user_id,
-                        websocket=websocket
-                    )
-                elif action == 'connect':
-                    log.debug('connect', data_from_client=data_from_client)
-                    form_data = data_from_client.get('form_data', None)
-                    form_data_pubkey = [f for f in form_data if f['name'] == 'pubkey'][0]
-                    if not len(form_data_pubkey):
-                        log.debug(
-                            'Connect did not include valid form data',
-                            data_from_client=data_from_client
-                        )
-                        continue
-                    pubkey = form_data_pubkey.get('value', '').strip()
-                    await self.users.connect_to_peer(user_id, pubkey)
-
-                continue
+                await self.users.handle_user_message(websocket, user_id,
+                                                     data_from_client)
 
             # Server action dispatching
             data_from_server = data_from_client

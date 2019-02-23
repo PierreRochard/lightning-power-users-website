@@ -41,10 +41,16 @@ class User(object):
         }
         await self.send(message=message)
 
-    async def send_connect_error(self, error: str):
+    async def send_error_message(self, error: str):
         message = {
-            'action': 'connect_error',
+            'action': 'error_message',
             'error': error
+        }
+        await self.send(message=message)
+
+    async def send_confirmed_capacity(self):
+        message = {
+            'action': 'confirmed_capacity',
         }
         await self.send(message=message)
 
@@ -56,6 +62,42 @@ class Users(object):
         self.rpc = rpc
         self.connections = {}
 
+    async def send(self, user_id: str, message):
+        user = self.connections.get(user_id, None)
+        if user is None:
+            return
+        await user.send(message)
+
+    async def handle_user_message(self,
+                                  websocket,
+                                  user_id,
+                                  data_from_client):
+        action = data_from_client.get('action', None)
+        if action == 'register':
+            await self.register(
+                user_id=user_id,
+                websocket=websocket
+            )
+        elif action == 'connect':
+            log.debug('connect', data_from_client=data_from_client)
+            form_data = data_from_client.get('form_data', None)
+            form_data_pubkey = [f for f in form_data if f['name'] == 'pubkey'][0]
+            if not len(form_data_pubkey):
+                log.debug(
+                    'Connect did not include valid form data',
+                    data_from_client=data_from_client
+                )
+                return
+            pubkey = form_data_pubkey.get('value', '').strip()
+            await self.connect_to_peer(user_id, pubkey)
+        elif action == 'capacity_request':
+            form_data = data_from_client.get('form_data', None)
+            await self.confirm_capacity(user_id, form_data)
+        elif action is not None:
+            log.debug('Unknown action',
+                      action=action,
+                      data_from_client=data_from_client)
+
     async def register(self, user_id: str, websocket):
         log.info(
             'Registering user_id',
@@ -66,12 +108,6 @@ class Users(object):
 
     async def unregister(self, user_id: str):
         del self.connections[user_id]
-
-    async def send(self, user_id: str, message):
-        user = self.connections.get(user_id, None)
-        if user is None:
-            return
-        await user.send(message)
 
     async def connect_to_peer(self, user_id: str, remote_pubkey_input: str):
         logger = get_logger()
@@ -161,3 +197,9 @@ class Users(object):
                                    exc_info=True)
                     await user_websocket.send_connect_error(f'Error: {details}')
                     return
+
+    async def confirm_capacity(self, user_id, form_data):
+        log.debug('confirm_capacity', user_id=user_id, form_data=form_data)
+
+        user_websocket: User = self.connections[user_id]
+        await user_websocket.send_confirmed_capacity()

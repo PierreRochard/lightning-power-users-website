@@ -5,6 +5,7 @@ from bitcoin.core import COIN
 from flask import render_template, session
 from flask_admin import BaseView, expose
 
+from website.constants import EXPECTED_BYTES
 from website.utilities.cache.cache import get_latest
 from website.views.request_capacity_view import get_request_capacity_form
 from websocket.constants import DEFAULT_WEBSOCKET_URL
@@ -28,5 +29,6 @@ class HomeView(BaseView):
             'home_view/index.html',
             WEBSOCKET_HOST=DEFAULT_WEBSOCKET_URL,
             form=form,
-            price_per_sat=price_per_sat
+            price_per_sat=price_per_sat,
+            EXPECTED_BYTES=EXPECTED_BYTES
         )

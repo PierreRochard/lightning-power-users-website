@@ -79,16 +79,22 @@ document.addEventListener('DOMContentLoaded', async function () {
     const connectButton = document.getElementById('connect_button');
     const connectTextarea = document.getElementById('connect_textarea');
     const progressBar = document.getElementById('progress_bar');
-    const connectError = document.getElementById('connect_error');
+
+    const errorMessage = document.getElementById('error_message');
 
     const connectTab = document.getElementById('connect-tab');
     const connectTabContent = document.getElementById('connect-tab-content');
+
     const capacityTab = document.getElementById('capacity-tab');
     const capacityTabContent = document.getElementById('capacity-tab-content');
+
+    const chainTab = document.getElementById('chain-tab');
+    const chainTabContent = document.getElementById('capacity-tab-content');
 
     function websocketSend(data) {
         const data_string = JSON.stringify(data);
         user_websocket.send(data_string);
+        console.log(data_string);
     }
 
     user_websocket.onopen = function (event) {
@@ -96,6 +102,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             user_id: user_id,
             action: "register"
         };
+
         websocketSend(user_id_object);
     };
 
@@ -108,9 +115,8 @@ document.addEventListener('DOMContentLoaded', async function () {
                 break;
             case "connected":
                 console.log("connected");
-                progressBar.style.width = "100%";
+                progressBar.style.width = "0%";
                 progressBar.textContent = "";
-                // connectTab.style.display = 'none';
                 connectTabContent.classList.remove('show');
                 connectTabContent.classList.remove('active');
                 connectTab.classList.remove('active');
@@ -119,12 +125,24 @@ document.addEventListener('DOMContentLoaded', async function () {
                 capacityTab.classList.add('active');
                 $('#capacity-tab-content').tab('show');
                 break;
-            case "connect_error":
-                console.log("connect error");
+            case "confirmed_capacity":
+                console.log("capacity_confirmed");
                 progressBar.style.width = "0%";
                 progressBar.textContent = "";
-                connectError.style.visibility = "visible";
-                connectError.textContent = msg.error;
+                capacityTabContent.classList.remove('show');
+                capacityTabContent.classList.remove('active');
+                capacityTab.classList.remove('active');
+                capacityTab.classList.add('disabled');
+                chainTab.classList.remove('disabled');
+                chainTab.classList.add('active');
+                $('#chain-tab-content').tab('show');
+                break;
+            case "error_message":
+                console.log("error message");
+                progressBar.style.width = "0%";
+                progressBar.textContent = "";
+                errorMessage.style.visibility = "visible";
+                errorMessage.textContent = msg.error;
                 connectButton.disabled = false;
                 connectTextarea.disabled = false;
                 break;
@@ -139,8 +157,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         connectButton.disabled = true;
         connectTextarea.disabled = true;
 
-        connectError.textContent = "";
-        connectError.style.visibility = "hidden";
+        errorMessage.textContent = "";
+        errorMessage.style.visibility = "hidden";
 
         const connectFormDataObject = {
             user_id: user_id,
@@ -150,6 +168,30 @@ document.addEventListener('DOMContentLoaded', async function () {
         websocketSend(connectFormDataObject);
     }
     connectForm.onsubmit = connectFormSubmit;
+
+
+    const capacityForm = document.getElementById('capacity_form');
+    const capacityButton = document.getElementById('capacity_button');
+
+    function capacityFormSubmit(event) {
+        event.preventDefault();
+        progressBar.style.width = "50%";
+        progressBar.textContent = "Confirming capacity...";
+        const formData = JSON.parse(JSON.stringify(jQuery('#capacity_form').serializeArray()));
+        capacityButton.disabled = true;
+
+        errorMessage.textContent = "";
+        errorMessage.style.visibility = "hidden";
+
+        const capacityFormDataObject = {
+            user_id: user_id,
+            action: 'capacity_request',
+            form_data: formData
+        };
+        websocketSend(capacityFormDataObject);
+    }
+    capacityForm.onsubmit = capacityFormSubmit;
+
 
 
 }, false);
