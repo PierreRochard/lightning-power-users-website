@@ -81,6 +81,11 @@ document.addEventListener('DOMContentLoaded', async function () {
     const progressBar = document.getElementById('progress_bar');
     const connectError = document.getElementById('connect_error');
 
+    const connectTab = document.getElementById('connect-tab');
+    const connectTabContent = document.getElementById('connect-tab-content');
+    const capacityTab = document.getElementById('capacity-tab');
+    const capacityTabContent = document.getElementById('capacity-tab-content');
+
     function websocketSend(data) {
         const data_string = JSON.stringify(data);
         user_websocket.send(data_string);
@@ -105,6 +110,14 @@ document.addEventListener('DOMContentLoaded', async function () {
                 console.log("connected");
                 progressBar.style.width = "100%";
                 progressBar.textContent = "";
+                // connectTab.style.display = 'none';
+                connectTabContent.classList.remove('show');
+                connectTabContent.classList.remove('active');
+                connectTab.classList.remove('active');
+                connectTab.classList.add('disabled');
+                capacityTab.classList.remove('disabled');
+                capacityTab.classList.add('active');
+                $('#capacity-tab-content').tab('show');
                 break;
             case "connect_error":
                 console.log("connect error");
