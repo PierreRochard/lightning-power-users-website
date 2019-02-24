@@ -229,5 +229,27 @@ document.addEventListener('DOMContentLoaded', async function () {
         websocketSend(chainFormDataObject);
     }
     chainForm.onsubmit = chainFormSubmit;
+
+    const paymentForm = document.getElementById('payment_form');
+    const paymentButton = document.getElementById('payment_button');
+
+    function paymentFormSubmit(event) {
+        event.preventDefault();
+        progressBar.style.width = "50%";
+        progressBar.textContent = "Getting payment request...";
+        const formData = JSON.parse(JSON.stringify(jQuery('#payment_form').serializeArray()));
+        paymentButton.disabled = true;
+
+        errorMessage.textContent = "";
+        errorMessage.style.visibility = "hidden";
+
+        const paymentFormDataObject = {
+            user_id: user_id,
+            action: 'payment_request',
+            form_data: formData
+        };
+        websocketSend(paymentFormDataObject);
+    }
+    paymentForm.onsubmit = paymentFormSubmit;
 }, false);
 
