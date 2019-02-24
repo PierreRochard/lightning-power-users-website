@@ -89,7 +89,10 @@ document.addEventListener('DOMContentLoaded', async function () {
     const capacityTabContent = document.getElementById('capacity-tab-content');
 
     const chainTab = document.getElementById('chain-tab');
-    const chainTabContent = document.getElementById('capacity-tab-content');
+    const chainTabContent = document.getElementById('chain-tab-content');
+
+    const paymentTab = document.getElementById('payment-tab');
+    const paymentTabContent = document.getElementById('payment-tab-content');
 
     function websocketSend(data) {
         const data_string = JSON.stringify(data);
@@ -136,6 +139,18 @@ document.addEventListener('DOMContentLoaded', async function () {
                 chainTab.classList.remove('disabled');
                 chainTab.classList.add('active');
                 $('#chain-tab-content').tab('show');
+                break;
+            case "confirmed_chain_fee":
+                console.log("confirmed_chain_fee");
+                progressBar.style.width = "0%";
+                progressBar.textContent = "";
+                chainTabContent.classList.remove('show');
+                chainTabContent.classList.remove('active');
+                chainTab.classList.remove('active');
+                chainTab.classList.add('disabled');
+                paymentTab.classList.remove('disabled');
+                paymentTab.classList.add('active');
+                $('#payment-tab-content').tab('show');
                 break;
             case "error_message":
                 console.log("error message");
@@ -193,6 +208,26 @@ document.addEventListener('DOMContentLoaded', async function () {
     capacityForm.onsubmit = capacityFormSubmit;
 
 
+    const chainForm = document.getElementById('chain_form');
+    const chainButton = document.getElementById('chain_button');
 
+    function chainFormSubmit(event) {
+        event.preventDefault();
+        progressBar.style.width = "50%";
+        progressBar.textContent = "Confirming chain fee...";
+        const formData = JSON.parse(JSON.stringify(jQuery('#chain_form').serializeArray()));
+        chainButton.disabled = true;
+
+        errorMessage.textContent = "";
+        errorMessage.style.visibility = "hidden";
+
+        const chainFormDataObject = {
+            user_id: user_id,
+            action: 'chain_fee',
+            form_data: formData
+        };
+        websocketSend(chainFormDataObject);
+    }
+    chainForm.onsubmit = chainFormSubmit;
 }, false);
 

@@ -40,10 +40,10 @@
     <li class="nav-item">
         <span
                 class="nav-link disabled"
-                id="contact-tab"
+                id="payment-tab"
                 data-toggle="tab"
                 role="tab"
-                aria-controls="contact-tab-content"
+                aria-controls="payment-tab-content"
                 aria-selected="false">
             4. Payment
         </span>
@@ -75,9 +75,13 @@
     {% include 'home_view/blocks/capacity_request/chain_fee.html' %}
     </div>
 
-
+    <div
+            class="tab-pane fade"
+            id="payment-tab-content"
+            role="tabpanel"
+            aria-labelledby="payment-tab">
     {% include 'home_view/blocks/capacity_request/payment.html' %}
-
+    </div>
 
     <div
             id="error_message"
@@ -85,6 +89,7 @@
             style="visibility: hidden; padding: 2px; margin-top: 10px"
     >
     </div>
+
     <div class="progress center-block"
          style="width: 50%; margin-left: auto; margin-right:auto;">
         <div id="progress_bar"

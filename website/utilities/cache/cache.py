@@ -37,7 +37,7 @@ def get_latest(name, date_time=None):
                                     or e.get('economical') is None for e in data]
             if any(fee_estimate_missing):
                 cache_fee_estimate()
-                get_latest(name, date_time)
+                data = get_latest(name, date_time)
     return data
 
 def get_data(name, label):

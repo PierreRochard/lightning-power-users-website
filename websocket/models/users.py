@@ -54,6 +54,12 @@ class User(object):
         }
         await self.send(message=message)
 
+    async def send_confirmed_chain_fee(self):
+        message = {
+            'action': 'confirmed_chain_fee',
+        }
+        await self.send(message=message)
+
 
 class Users(object):
     rpc: Client
@@ -93,6 +99,9 @@ class Users(object):
         elif action == 'capacity_request':
             form_data = data_from_client.get('form_data', None)
             await self.confirm_capacity(user_id, form_data)
+        elif action == 'chain_fee':
+            form_data = data_from_client.get('form_data', None)
+            await self.chain_fee(user_id, form_data)
         elif action is not None:
             log.debug('Unknown action',
                       action=action,
@@ -203,3 +212,9 @@ class Users(object):
 
         user_websocket: User = self.connections[user_id]
         await user_websocket.send_confirmed_capacity()
+
+    async def chain_fee(self, user_id, form_data):
+        log.debug('chain_fee', user_id=user_id, form_data=form_data)
+
+        user_websocket: User = self.connections[user_id]
+        await user_websocket.send_confirmed_chain_fee()
