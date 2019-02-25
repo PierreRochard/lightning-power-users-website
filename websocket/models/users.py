@@ -1,11 +1,13 @@
 import json
 
+from flask_qrcode import QRcode
 from google.protobuf.json_format import MessageToDict
 # noinspection PyProtectedMember
 from grpc._channel import _Rendezvous
 from structlog import get_logger
 
 from lnd_grpc.lnd_grpc import Client
+from website.constants import EXPECTED_BYTES
 from website.logger import log
 from websocket.constants import PUBKEY_LENGTH
 
@@ -54,9 +56,11 @@ class User(object):
         }
         await self.send(message=message)
 
-    async def send_confirmed_chain_fee(self):
+    async def send_payreq(self, payment_request, qrcode):
         message = {
-            'action': 'confirmed_chain_fee',
+            'action': 'payment_request',
+            'payment_request': payment_request,
+            'qrcode': qrcode
         }
         await self.send(message=message)
 
@@ -100,8 +104,7 @@ class Users(object):
             form_data = data_from_client.get('form_data', None)
             await self.confirm_capacity(user_id, form_data)
         elif action == 'chain_fee':
-            form_data = data_from_client.get('form_data', None)
-            await self.chain_fee(user_id, form_data)
+            await self.chain_fee(user_id, data_from_client)
         elif action is not None:
             log.debug('Unknown action',
                       action=action,
@@ -128,7 +131,7 @@ class Users(object):
                 'Pressed connect button but no remote_pubkey found',
                 remote_pubkey_input=remote_pubkey_input
             )
-            await user_websocket.send_connect_error('Please enter your PubKey')
+            await user_websocket.send_error_message('Please enter your PubKey')
             return
 
         full_remote_pubkey = remote_pubkey
@@ -141,14 +144,14 @@ class Users(object):
                 log_user.error('Invalid PubKey format',
                                remote_pubkey=remote_pubkey,
                                exc_info=True)
-                await user_websocket.send_connect_error('Invalid PubKey format')
+                await user_websocket.send_error_message('Invalid PubKey format')
                 return
         else:
             remote_host = None
 
         if len(remote_pubkey) != PUBKEY_LENGTH:
             log_user.error('Invalid PubKey length', pubkey=remote_pubkey)
-            await user_websocket.send_connect_error(
+            await user_websocket.send_error_message(
                 f'Invalid PubKey length, expected {PUBKEY_LENGTH} characters'
             )
             return
@@ -164,7 +167,7 @@ class Users(object):
                     'Error with list_peers rpc',
                     exc_info=True
                 )
-                await user_websocket.send_connect_error('Error: please refresh and try again')
+                await user_websocket.send_error_message('Error: please refresh and try again')
                 return
 
             try:
@@ -179,7 +182,7 @@ class Users(object):
                     'Unknown PubKey, please provide pubkey@host:port',
                     pubkey=remote_pubkey,
                     exc_info=True)
-                await user_websocket.send_connect_error(
+                await user_websocket.send_error_message(
                     'Unknown PubKey, please provide pubkey@host:port'
                 )
                 return
@@ -204,7 +207,7 @@ class Users(object):
                                    remote_host=remote_host,
                                    details=details,
                                    exc_info=True)
-                    await user_websocket.send_connect_error(f'Error: {details}')
+                    await user_websocket.send_error_message(f'Error: {details}')
                     return
 
     async def confirm_capacity(self, user_id, form_data):
@@ -213,8 +216,33 @@ class Users(object):
         user_websocket: User = self.connections[user_id]
         await user_websocket.send_confirmed_capacity()
 
-    async def chain_fee(self, user_id, form_data):
-        log.debug('chain_fee', user_id=user_id, form_data=form_data)
+    async def chain_fee(self, user_id, data):
+        log.debug('chain_fee', user_id=user_id, data=data)
+
+        selected_capacity = data.get('selected_capacity', None)
+        selected_capacity_rate = data.get('selected_capacity_rate')
+        selected_chain_fee = data.get('selected_chain_fee')
+
+        capacity_fee = int(selected_capacity * selected_capacity_rate)
+
+        transaction_fee = selected_chain_fee * EXPECTED_BYTES
+        total_fee = capacity_fee + transaction_fee
+
+        memo = 'Lightning Power Users capacity request: '
+        if selected_capacity == 0:
+            memo += 'reciprocate'
+        else:
+            memo += f'{selected_capacity} @ {selected_capacity_rate}'
+
+        invoice = self.rpc.add_invoice(
+            value=int(total_fee),
+            memo=memo
+        )
+        invoice = MessageToDict(invoice)
+        payment_request = invoice['payment_request']
+        uri = ':'.join(['lightning', payment_request])
+        qrcode = QRcode.qrcode(uri, border=10)
 
         user_websocket: User = self.connections[user_id]
-        await user_websocket.send_confirmed_chain_fee()
+        await user_websocket.send_payreq(payment_request, qrcode)
+

@@ -1,6 +1,10 @@
 
 document.addEventListener('DOMContentLoaded', async function () {
 
+    let selectedCapacity;
+    let selectedCapacityFeeRate;
+    let selectedTransactionFeeRate;
+
     const capacitySelect = document.querySelector('select[name="capacity"]');
     const capacityFeeRateSelect = document.querySelector('select[name="capacity_fee_rate"]');
     const transactionFeeRateSelect = document.querySelector('select[name="transaction_fee_rate"]');
@@ -15,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         const capacityFeeRateSelect = document.querySelector('select[name="capacity_fee_rate"]');
         const transactionFeeRateSelect = document.querySelector('select[name="transaction_fee_rate"]');
 
-        const selectedCapacity = parseInt(capacitySelect.selectedOptions[0].value);
+        selectedCapacity = parseInt(capacitySelect.selectedOptions[0].value);
         const selectedCapacityUsd = Math.round(selectedCapacity * pricePerSat * 100) / 100;
         if (selectedCapacity > 0) {
             capacityFeeRateSelect.disabled = false;
@@ -37,7 +41,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             document.querySelector('#selected-capacity-usd').innerHTML = '-';
         }
 
-        const selectedCapacityFeeRate = parseFloat(capacityFeeRateSelect.selectedOptions[0].value);
+        selectedCapacityFeeRate = parseFloat(capacityFeeRateSelect.selectedOptions[0].value);
         document.querySelector('#capacity-fee-rate').innerHTML = selectedCapacityFeeRate.toLocaleString(undefined, {style: 'percent'});
         document.querySelector('#capacity-fee-rate-usd').innerHTML = selectedCapacityFeeRate.toLocaleString(undefined, {style: 'percent'});
 
@@ -49,12 +53,18 @@ document.addEventListener('DOMContentLoaded', async function () {
                 maximumFractionDigits: 2,
                 minimumFractionDigits: 2
             });
+
+            document.querySelector('#capacity-fee-payment').innerHTML = capacityFee.toLocaleString();
+            document.querySelector('#capacity-fee-usd-payment').innerHTML = capacityFeeUsd.toLocaleString(undefined, {
+                maximumFractionDigits: 2,
+                minimumFractionDigits: 2
+            });
         } else {
-            document.querySelector('#capacity-fee').innerHTML = '-';
-            document.querySelector('#capacity-fee-usd').innerHTML = '-';
+            document.querySelector('#capacity-fee-payment').innerHTML = '-';
+            document.querySelector('#capacity-fee-usd-payment').innerHTML = '-';
         }
 
-        const selectedTransactionFeeRate = parseInt(transactionFeeRateSelect.selectedOptions[0].value);
+        selectedTransactionFeeRate = parseInt(transactionFeeRateSelect.selectedOptions[0].value);
         document.querySelector('#transaction-fee-rate').innerHTML = selectedTransactionFeeRate.toLocaleString();
 
         const expectedBytes = parseInt(document.querySelector('#expected-bytes').innerHTML);
@@ -62,6 +72,12 @@ document.addEventListener('DOMContentLoaded', async function () {
         const transactionFeeUsd = Math.round(transactionFee * pricePerSat * 100) / 100;
         document.querySelector('#transaction-fee').innerHTML = transactionFee.toLocaleString();
         document.querySelector('#transaction-fee-usd').innerHTML = transactionFeeUsd.toLocaleString(undefined, {
+            maximumFractionDigits: 2,
+            minimumFractionDigits: 2
+        });
+
+        document.querySelector('#transaction-fee-payment').innerHTML = transactionFee.toLocaleString();
+        document.querySelector('#transaction-fee-usd-payment').innerHTML = transactionFeeUsd.toLocaleString(undefined, {
             maximumFractionDigits: 2,
             minimumFractionDigits: 2
         });
@@ -93,6 +109,11 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     const paymentTab = document.getElementById('payment-tab');
     const paymentTabContent = document.getElementById('payment-tab-content');
+
+    const qrCodeDiv = document.getElementById('qrcode-div');
+    const payreqInput = document.getElementById('payreq-input');
+
+    const paymentInfo = document.getElementById('payment-info');
 
     function websocketSend(data) {
         const data_string = JSON.stringify(data);
@@ -140,10 +161,17 @@ document.addEventListener('DOMContentLoaded', async function () {
                 chainTab.classList.add('active');
                 $('#chain-tab-content').tab('show');
                 break;
-            case "confirmed_chain_fee":
+            case "payment_request":
                 console.log("confirmed_chain_fee");
                 progressBar.style.width = "0%";
                 progressBar.textContent = "";
+
+                const image = document.getElementById("qrcode");
+                image.src = msg.qrcode;
+                qrCodeDiv.appendChild(image);
+
+                payreqInput.value = msg.payment_request;
+
                 chainTabContent.classList.remove('show');
                 chainTabContent.classList.remove('active');
                 chainTab.classList.remove('active');
@@ -151,6 +179,10 @@ document.addEventListener('DOMContentLoaded', async function () {
                 paymentTab.classList.remove('disabled');
                 paymentTab.classList.add('active');
                 $('#payment-tab-content').tab('show');
+                break;
+            case "payment_received":
+                console.log(event.data);
+                paymentInfo.className += paymentInfo.className ? ' paid' : 'paid';
                 break;
             case "error_message":
                 console.log("error message");
@@ -224,32 +256,14 @@ document.addEventListener('DOMContentLoaded', async function () {
         const chainFormDataObject = {
             user_id: user_id,
             action: 'chain_fee',
-            form_data: formData
+            form_data: formData,
+            selected_capacity: selectedCapacity,
+            selected_capacity_rate: selectedCapacityFeeRate,
+            selected_chain_fee: selectedTransactionFeeRate
         };
         websocketSend(chainFormDataObject);
     }
     chainForm.onsubmit = chainFormSubmit;
 
-    const paymentForm = document.getElementById('payment_form');
-    const paymentButton = document.getElementById('payment_button');
-
-    function paymentFormSubmit(event) {
-        event.preventDefault();
-        progressBar.style.width = "50%";
-        progressBar.textContent = "Getting payment request...";
-        const formData = JSON.parse(JSON.stringify(jQuery('#payment_form').serializeArray()));
-        paymentButton.disabled = true;
-
-        errorMessage.textContent = "";
-        errorMessage.style.visibility = "hidden";
-
-        const paymentFormDataObject = {
-            user_id: user_id,
-            action: 'payment_request',
-            form_data: formData
-        };
-        websocketSend(paymentFormDataObject);
-    }
-    paymentForm.onsubmit = paymentFormSubmit;
 }, false);
 
