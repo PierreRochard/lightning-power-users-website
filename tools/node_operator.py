@@ -87,7 +87,7 @@ class NodeOperator(object):
         for node in self.nodes.values():
             node.reconnect()
 
-    def close_channels(self, ip_address: str):
+    def close_channels_by_host(self, ip_address: str):
         for node in self.nodes.values():
             ip_addresses = []
             if node.info is None:
@@ -102,9 +102,45 @@ class NodeOperator(object):
                             force=force,
                             sat_per_byte=1
                             )
-                        print(pformat(MessageToDict(txid)))
-            print(node.pubkey, ip_addresses)
-        print(len(self.nodes.values()))
+                        log.info(pformat(MessageToDict(txid)))
+            log.info(node.pubkey, ip_addresses)
+        log.info(len(self.nodes.values()))
+
+    def close_channels(self):
+        dormant_channels = []
+        exclude_closed_and_pending = 0
+        exclude_no_local = 0
+        exclude_remote_skin_in_the_game = 0
+        log.info('Closing channels')
+        for node in self.nodes.values():
+            for channel in node.channels:
+                if channel.data.get('closing_txid') or channel.data.get('close_height') or channel.is_pending:
+                    exclude_closed_and_pending += 1
+                    continue
+                if channel.local_balance == 0:
+                    exclude_no_local += 1
+                    continue
+                if channel.remote_balance > 0:
+                    exclude_remote_skin_in_the_game += 1
+                    continue
+
+                log.info('Dormant channel', channel_data=channel.data)
+                force = not channel.is_active
+                channel_close_updates = self.rpc.close_channel(
+                    channel_point=channel.channel_point,
+                    force=force,
+                    sat_per_byte=1
+                )
+                for channel_close_update in channel_close_updates:
+                    log.info('channel_close_update',
+                             channel_close_update=MessageToDict(channel_close_update)
+                             )
+                    break
+                dormant_channels.append(channel)
+        dormant_capacity = sum([c.local_balance for c in dormant_channels])
+
+        log.info('Dormant capacity', dormant_capacity=dormant_capacity,
+                 dormant_channels=len(dormant_channels))
 
     def identify_dupes(self):
         for pubkey in self.nodes:
@@ -136,7 +172,8 @@ if __name__ == '__main__':
         '--ip_address',
         '-i',
         type=str,
-        help='The IP address of the peer that you want to force close channels on'
+        help='The IP address of the peer that you want to force close channels on',
+        default=None
     )
 
     parser.add_argument(
@@ -193,7 +230,7 @@ if __name__ == '__main__':
     )
 
     if args.action == 'close' and args.ip_address:
-        node_operator.close_channels(ip_address=args.ip_address)
+        node_operator.close_channels_by_host(ip_address=args.ip_address)
 
     elif args.action == 'reconnect':
         node_operator.reconnect_all()
@@ -202,7 +239,7 @@ if __name__ == '__main__':
         get_google_sheet_data(node_operator)
 
     elif args.action == 'open':
-        response = lnd_remote_client.open_channel(
+        response = node_operator.rpc.open_channel(
             node_pubkey_string=args.pubkey,
             local_funding_amount=args.size,
             push_sat=0,
@@ -223,3 +260,5 @@ if __name__ == '__main__':
     elif args.action == 'dupes':
         node_operator.identify_dupes()
 
+    elif args.action == 'close' and not args.ip_address:
+        node_operator.close_channels()
