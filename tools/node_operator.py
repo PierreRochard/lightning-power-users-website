@@ -49,6 +49,7 @@ class NodeOperator(object):
         self.get_peers()
 
     def get_channels(self):
+        log.info('Getting channels')
         channels = self.rpc.list_channels()
         [self.nodes[m.remote_pubkey].add_channel(Channel(self.rpc,
                                                          **MessageToDict(m)))

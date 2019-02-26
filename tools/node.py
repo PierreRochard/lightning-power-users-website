@@ -58,7 +58,8 @@ class Node(object):
                 log.debug(
                     'Failed to reconnect',
                     pubkey=self.pubkey,
-                    address=address
+                    address=address,
+                    details=e.details
                 )
                 return False
 
