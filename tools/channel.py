@@ -1,3 +1,5 @@
+from google.protobuf.json_format import MessageToDict
+
 from lnd_grpc.lnd_grpc import Client
 
 
@@ -20,7 +22,7 @@ class Channel(object):
             self.chan_id = None
 
         if self.chan_id is not None and not self.data.get('close_height', False):
-            self.info = self.rpc.get_chan_info(self.chan_id)
+            self.info = MessageToDict(self.rpc.get_chan_info(self.chan_id))
 
         self.remote_pubkey = remote_pubkey
         if remote_pubkey is None and self.info is not None:

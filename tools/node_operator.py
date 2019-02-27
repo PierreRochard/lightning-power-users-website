@@ -1,4 +1,5 @@
 from collections import defaultdict
+from datetime import datetime
 from pprint import pformat
 from typing import Dict
 
@@ -123,7 +124,11 @@ class NodeOperator(object):
                 if channel.remote_balance > 0:
                     exclude_remote_skin_in_the_game += 1
                     continue
-
+                last_update = datetime.fromtimestamp(channel.info['last_update'])
+                today = datetime.now()
+                days_since_last_update = (today - last_update).days
+                if days_since_last_update < 7:
+                    continue
                 log.info('Dormant channel', channel_data=channel.data)
                 force = not channel.is_active
                 channel_close_updates = self.rpc.close_channel(
