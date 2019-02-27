@@ -1,3 +1,4 @@
+alembic
 flask
 flask-admin
 Flask-Assets
@@ -8,10 +9,13 @@ Frozen-Flask
 google-api-python-client
 humanize
 jsmin
+keychain
 networkx
 oauth2client
+psycopg2
 python-bitcoinlib
 requests
+sqlalchemy
 structlog
 webassets
 websockets

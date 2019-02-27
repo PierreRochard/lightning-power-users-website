@@ -7,6 +7,8 @@ from google.protobuf.json_format import MessageToDict
 # noinspection PyProtectedMember
 from grpc._channel import _Rendezvous
 
+from database import session_scope
+from database.models import Balances
 from lnd_grpc import lnd_grpc
 from lnd_grpc.protos.rpc_pb2 import OpenStatusUpdate
 from website.logger import log
@@ -154,6 +156,20 @@ class NodeOperator(object):
                 continue
             print(node)
 
+    def reconciliation(self):
+        info = MessageToDict(self.rpc.get_info())
+        wallet_balance = MessageToDict(self.rpc.wallet_balance())
+        channel_balance = MessageToDict(self.rpc.channel_balance())
+        with session_scope() as session:
+            new_balance = Balances()
+            new_balance.channel_balance = channel_balance['balance']
+            new_balance.channel_pending_open_balance = channel_balance['pending_open_balance']
+            new_balance.wallet_total_balance = wallet_balance['total_balance']
+            new_balance.wallet_confirmed_balance = wallet_balance['confirmed_balance']
+            session.add(new_balance)
+
+        print('here')
+
 
 if __name__ == '__main__':
     import argparse
@@ -267,3 +283,6 @@ if __name__ == '__main__':
 
     elif args.action == 'close' and not args.ip_address:
         node_operator.close_channels()
+
+    elif args.action == 'rec':
+        node_operator.reconciliation()
