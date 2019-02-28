@@ -6,7 +6,6 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql.elements import and_
 
 from database import session_scope
-from database.models.event_log import EventLog
 from database.models.open_channels import OpenChannels
 from lnd_grpc.lnd_grpc import Client
 from lnd_grpc.protos.rpc_pb2 import GetInfoResponse
@@ -49,18 +48,7 @@ class UpsertOpenChannels(object):
                 session.add(record)
 
             for key, value in data.items():
-                old_value = getattr(record, key)
                 setattr(record, key, value)
-                session.commit()
-                new_value = getattr(record, key)
-                if old_value != new_value:
-                    new_event = EventLog()
-                    new_event.pubkey = local_pubkey
-                    new_event.table = 'open_channels'
-                    new_event.column = key
-                    new_event.old_value = old_value
-                    new_event.new_value = new_value
-                    session.add(new_event)
 
 
 if __name__ == '__main__':
