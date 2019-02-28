@@ -126,3 +126,5 @@ pip-selfcheck.json
 /website/webpack.config.js
 !/website/assets/scripts/
 /website/static/gen/
+!/database/scripts/
+/remote/

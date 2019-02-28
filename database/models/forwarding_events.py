@@ -11,8 +11,8 @@ from database.session import session_scope
 from database.base import Base
 
 
-class UnspentOutputs(Base):
-    __tablename__ = 'unspent_outputs'
+class ForwardingEvents(Base):
+    __tablename__ = 'forwarding_events'
 
     created_at = Column(DateTime(timezone=True),
                         nullable=False,
@@ -23,18 +23,17 @@ class UnspentOutputs(Base):
                         onupdate=func.now(),
                         server_default=func.now())
 
-    deleted_at = Column(DateTime(timezone=True),
-                        nullable=True)
-
     id = Column(BIGINT, primary_key=True)
+
     local_pubkey = Column(String)
 
-    type = Column(String)
-    address = Column(String)
-    amount_sat = Column(BIGINT)
-    script_pubkey = Column(String)
-    outpoint = Column(String)
-    confirmations = Column(BIGINT)
+    chan_id_in = Column(BIGINT)
+    chan_id_out = Column(BIGINT)
+    timestamp = Column(BIGINT)
+    amt_in = Column(BIGINT)
+    amt_out = Column(BIGINT)
+    fee = Column(BIGINT)
+    fee_msat = Column(BIGINT)
 
 
 if __name__ == '__main__':

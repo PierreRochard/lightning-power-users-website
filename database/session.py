@@ -40,15 +40,16 @@ def get_url():
     return pg_url
 
 
+pg_url = get_url()
+engine = create_engine(pg_url, echo=False,
+                       connect_args={'sslmode': 'prefer'})
+session_maker = sessionmaker(bind=engine)
+
+
 @contextmanager
-def session_scope(echo=False,
-                  raise_integrity_error=True,
+def session_scope(raise_integrity_error=True,
                   raise_programming_error=True):
 
-    pg_url = get_url()
-    engine = create_engine(pg_url, echo=echo,
-                           connect_args={'sslmode': 'prefer'})
-    session_maker = sessionmaker(bind=engine)
     session = session_maker()
 
     try:

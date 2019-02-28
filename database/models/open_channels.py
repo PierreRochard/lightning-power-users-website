@@ -7,7 +7,7 @@ from sqlalchemy import (
     Boolean)
 from sqlalchemy.orm import Session
 
-from database import session_scope
+from database.session import session_scope
 from database.base import Base
 
 
