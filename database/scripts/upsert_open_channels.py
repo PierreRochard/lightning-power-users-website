@@ -15,14 +15,19 @@ class UpsertOpenChannels(object):
     rpc: Client
 
     def __init__(self,
+                 tls_cert_path: str = None,
+                 macaroon_path: str = None,
                  lnd_network: str = 'mainnet',
                  lnd_grpc_host: str = '127.0.0.1',
                  lnd_grpc_port: str = '10009'):
         self.rpc = Client(
+            tls_cert_path=tls_cert_path,
+            macaroon_path=macaroon_path,
             network=lnd_network,
             grpc_host=lnd_grpc_host,
             grpc_port=lnd_grpc_port,
         )
+
         channels = self.rpc.list_channels()
         info: GetInfoResponse = self.rpc.get_info()
         channel_dicts = [MessageToDict(c) for c in channels]
@@ -52,6 +57,27 @@ class UpsertOpenChannels(object):
 
 
 if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description='LND Node Operator Tools'
+    )
+
+    parser.add_argument(
+        '--macaroon',
+        '-m',
+        type=str
+    )
+
+    parser.add_argument(
+        '--tls',
+        '-t',
+        type=str
+    )
+
+    args = parser.parse_args()
+
     while True:
-        UpsertOpenChannels()
+        UpsertOpenChannels(tls_cert_path=args.tls,
+                           macaroon_path=args.macaroon)
         time.sleep(60)
