@@ -32,8 +32,8 @@ def keyring_get_or_create(label: str):
 
 def get_url():
     pg_url = URL(drivername='postgresql+psycopg2',
-                 host=os.environ['LPU_PGHOST'],
-                 port=os.environ['LPU_PGPORT'],
+                 host=os.environ.get('LPU_PGHOST', '127.0.0.1'),
+                 port=os.environ.get('LPU_PGPORT', '5432'),
                  database=keyring_get_or_create('LPU_PGDATABASE'),
                  username=keyring_get_or_create('LPU_PGUSER'),
                  password=keyring_get_or_create('LPU_PGPASSWORD'))
