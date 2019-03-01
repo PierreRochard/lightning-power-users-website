@@ -55,29 +55,3 @@ class UpsertOpenChannels(object):
             for key, value in data.items():
                 setattr(record, key, value)
 
-
-if __name__ == '__main__':
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        description='LND Node Operator Tools'
-    )
-
-    parser.add_argument(
-        '--macaroon',
-        '-m',
-        type=str
-    )
-
-    parser.add_argument(
-        '--tls',
-        '-t',
-        type=str
-    )
-
-    args = parser.parse_args()
-
-    while True:
-        UpsertOpenChannels(tls_cert_path=args.tls,
-                           macaroon_path=args.macaroon)
-        time.sleep(60)
