@@ -9,6 +9,7 @@ from grpc._channel import _Rendezvous
 
 from lnd_grpc import lnd_grpc
 from lnd_grpc.protos.rpc_pb2 import OpenStatusUpdate
+from tools.lightning_graph import LightningGraph
 from website.logger import log
 from tools.channel import Channel
 from tools.google_sheet import get_google_sheet_data
@@ -266,3 +267,16 @@ if __name__ == '__main__':
 
     elif args.action == 'close' and not args.ip_address:
         node_operator.close_channels()
+
+    elif args.action == 'graph':
+        lightning_graph = LightningGraph(
+            local_pubkey=args.pubkey,
+            node_operator=node_operator
+        )
+        pagerank_data = lightning_graph.pagerank()
+        lightning_graph.open_channels('pagerank', pagerank_data, top=50)
+
+    elif args.action == 'graph_csv':
+        lightning_graph = LightningGraph(local_pubkey=args.local_pubkey,
+                                         node_operator=node_operator)
+        lightning_graph.to_csv()
