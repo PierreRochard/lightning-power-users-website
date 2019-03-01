@@ -9,7 +9,6 @@ from grpc._channel import _Rendezvous
 
 from lnd_grpc import lnd_grpc
 from lnd_grpc.protos.rpc_pb2 import OpenStatusUpdate
-from tools.reconciliation import Reconciliation
 from website.logger import log
 from tools.channel import Channel
 from tools.google_sheet import get_google_sheet_data
@@ -267,11 +266,3 @@ if __name__ == '__main__':
 
     elif args.action == 'close' and not args.ip_address:
         node_operator.close_channels()
-
-    elif args.action == 'rec':
-        Reconciliation(
-            lnd_grpc_host=args.host,
-            lnd_grpc_port=args.port,
-            macaroon_path=args.macaroon,
-            tls_cert_path=args.tls
-        ).reconciliation()
