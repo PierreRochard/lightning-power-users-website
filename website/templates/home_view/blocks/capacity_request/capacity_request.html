@@ -1,9 +1,15 @@
-<h3>
-    Request Inbound Capacity
-</h3>
-
-<ul class="nav nav-tabs" id="capacityRequestTab" role="tablist">
-    <li class="nav-item">
+<div class="container">
+    <div class="row">
+        <div class="col-lg-12">
+            <h3>
+                Request Inbound Capacity
+            </h3>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-12">
+            <ul class="nav nav-tabs" id="capacityRequestTab" role="tablist">
+                <li class="nav-item">
         <span
                 class="nav-link active"
                 id="connect-tab"
@@ -13,8 +19,8 @@
                 aria-selected="true">
             1. Connect
         </span>
-    </li>
-    <li class="nav-item">
+                </li>
+                <li class="nav-item">
         <span
                 class="nav-link disabled"
                 id="capacity-tab"
@@ -25,8 +31,8 @@
         >
             2. Capacity
         </span>
-    </li>
-    <li class="nav-item">
+                </li>
+                <li class="nav-item">
         <span
                 class="nav-link disabled"
                 id="chain-tab"
@@ -36,8 +42,8 @@
                 aria-selected="false">
             3. Chain Fee
         </span>
-    </li>
-    <li class="nav-item">
+                </li>
+                <li class="nav-item">
         <span
                 class="nav-link disabled"
                 id="payment-tab"
@@ -47,55 +53,59 @@
                 aria-selected="false">
             4. Payment
         </span>
-    </li>
-</ul>
-<div class="tab-content">
+                </li>
+            </ul>
+            <div class="tab-content">
 
-    <div
-            class="tab-pane fade show active"
-            id="connect-tab-content"
-            role="tabpanel"
-            aria-labelledby="connect-tab">
-        {% include 'home_view/blocks/capacity_request/connect.html' %}
-    </div>
+                <div
+                        class="tab-pane fade show active"
+                        id="connect-tab-content"
+                        role="tabpanel"
+                        aria-labelledby="connect-tab">
+                    {% include 'home_view/blocks/capacity_request/connect.html' %}
+                </div>
 
-    <div
-            class="tab-pane fade"
-            id="capacity-tab-content"
-            role="tabpanel"
-            aria-labelledby="capacity-tab">
-        {% include 'home_view/blocks/capacity_request/capacity_fee.html' %}
-    </div>
+                <div
+                        class="tab-pane fade"
+                        id="capacity-tab-content"
+                        role="tabpanel"
+                        aria-labelledby="capacity-tab">
+                    {% include 'home_view/blocks/capacity_request/capacity_fee.html' %}
+                </div>
 
-    <div
-            class="tab-pane fade"
-            id="chain-tab-content"
-            role="tabpanel"
-            aria-labelledby="chain-tab">
-    {% include 'home_view/blocks/capacity_request/chain_fee.html' %}
-    </div>
+                <div
+                        class="tab-pane fade"
+                        id="chain-tab-content"
+                        role="tabpanel"
+                        aria-labelledby="chain-tab">
+                    {% include 'home_view/blocks/capacity_request/chain_fee.html' %}
+                </div>
 
-    <div
-            class="tab-pane fade"
-            id="payment-tab-content"
-            role="tabpanel"
-            aria-labelledby="payment-tab">
-    {% include 'home_view/blocks/capacity_request/payment.html' %}
-    </div>
+                <div
+                        class="tab-pane fade"
+                        id="payment-tab-content"
+                        role="tabpanel"
+                        aria-labelledby="payment-tab">
+                    {% include 'home_view/blocks/capacity_request/payment.html' %}
+                </div>
 
-    <div
-            id="error_message"
-            class="alert alert-danger"
-            style="visibility: hidden; padding: 2px; margin-top: 10px"
-    >
-    </div>
+                <div
+                        id="error_message"
+                        class="alert alert-danger"
+                        style="visibility: hidden; padding: 2px; margin-top: 10px"
+                >
+                </div>
 
-    <div class="progress center-block"
-         style="width: 50%; margin-left: auto; margin-right:auto;">
-        <div id="progress_bar"
-             class="progress-bar progress-bar-striped progress-bar-animated bg-warning"
-             role="progressbar" aria-valuenow="50"
-             aria-valuemin="0" aria-valuemax="100"
-             style="width: 0%;"></div>
+                <div    id="progress-bar-div"
+                        class="progress center-block"
+                        style="visibility: hidden; width: 50%; margin-left: auto; margin-right:auto;">
+                    <div id="progress_bar"
+                         class="progress-bar progress-bar-striped progress-bar-animated bg-warning"
+                         role="progressbar" aria-valuenow="50"
+                         aria-valuemin="0" aria-valuemax="100"
+                         style="width: 0%;"></div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>

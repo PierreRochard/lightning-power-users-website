@@ -1,23 +1,24 @@
-<h4>
-    Connect with our node
-</h4>
 <div class="container">
-    <form id="connect_form" onsubmit="">
-        <div class="form-group">
-            <label for="pubkey"></label>
-            <textarea
-                    class="form-control"
-                    type="text"
-                    id="connect_textarea"
-                    name="pubkey"
-                    placeholder="Your PubKey"></textarea>
+    <div class="row">
+        <div class="col-lg-12">
+            <form id="connect_form" onsubmit="">
+                <div class="form-group">
+                    <label for="pubkey"></label>
+                    <textarea
+                            class="form-control"
+                            type="text"
+                            id="connect_textarea"
+                            name="pubkey"
+                            placeholder="Your PubKey"></textarea>
+                </div>
+                <div class="text-center">
+                    <button id="connect_button"
+                            class="btn btn-lg btn-outline-warning"
+                            type="submit">
+                        Connect
+                    </button>
+                </div>
+            </form>
         </div>
-        <div class="text-center">
-            <button id="connect_button"
-                    class="btn btn-lg btn-outline-warning"
-                    type="submit">
-                Connect
-            </button>
-        </div>
-    </form>
+    </div>
 </div>

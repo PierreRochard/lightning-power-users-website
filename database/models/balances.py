@@ -2,8 +2,8 @@ from sqlalchemy import (
     Column,
     DateTime,
     func,
-    Integer
-)
+    Integer,
+    String)
 
 from database.base import Base
 
@@ -17,6 +17,7 @@ class Balances(Base):
 
     id = Column(Integer, primary_key=True)
 
+    pubkey = Column(String)
     channel_balance = Column(Integer)
     channel_pending_open_balance = Column(Integer)
     wallet_total_balance = Column(Integer)
