@@ -3,8 +3,8 @@
 
 {% block body %}
     <script>
-        const user_websocket = new WebSocket("{{ WEBSOCKET_HOST }}");
-        const user_id = "{{ session['user_id'] }}";
+        const session_websocket = new WebSocket("{{ WEBSOCKET_HOST }}");
+        const session_id = "{{ session['session_id'] }}";
         const pricePerSat = {{ price_per_sat }};
     </script>
     <script src="{{ url_for('static',filename='js/app.js') }}"></script>

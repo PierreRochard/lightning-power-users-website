@@ -47,7 +47,7 @@ class ChannelOpeningServer(object):
                 update_data = MessageToDict(update)
                 msg = {
                     'server_id': get_server_id('channels'),
-                    'user_id': data['user_id'],
+                    'session_id': data['session_id'],
                     'open_channel_update': update_data
                 }
                 await websocket.send(json.dumps(msg))
@@ -57,7 +57,7 @@ class ChannelOpeningServer(object):
             error_details = e.details()
             error_message = {
                 'server_id': get_server_id('channels'),
-                'user_id': data['user_id'],
+                'session_id': data['session_id'],
                 'error': error_details
             }
             log.error('Open channel error', error_message=error_message)

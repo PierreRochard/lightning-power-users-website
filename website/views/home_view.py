@@ -21,10 +21,10 @@ class HomeView(BaseView):
         price_per_sat = last_price / COIN
         form = get_request_capacity_form()
 
-        if session.get('user_id', None) is None:
-            session['user_id'] = uuid.uuid4().hex
-        if session.get('user_id', None) is None:
-            session['user_id'] = uuid.uuid4().hex
+        if session.get('session_id', None) is None:
+            session['session_id'] = uuid.uuid4().hex
+        if session.get('session_id', None) is None:
+            session['session_id'] = uuid.uuid4().hex
         return render_template(
             'home_view/index.html',
             WEBSOCKET_HOST=DEFAULT_WEBSOCKET_URL,

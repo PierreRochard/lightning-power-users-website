@@ -117,20 +117,20 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     function websocketSend(data) {
         const data_string = JSON.stringify(data);
-        user_websocket.send(data_string);
+        session_websocket.send(data_string);
         console.log(data_string);
     }
 
-    user_websocket.onopen = function (event) {
-        const user_id_object = {
-            user_id: user_id,
+    session_websocket.onopen = function (event) {
+        const session_id_object = {
+            session_id: session_id,
             action: "register"
         };
 
-        websocketSend(user_id_object);
+        websocketSend(session_id_object);
     };
 
-    user_websocket.onmessage = function (event) {
+    session_websocket.onmessage = function (event) {
         console.log(event.data);
         const msg = JSON.parse(event.data);
         switch(msg.action) {
@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         errorMessage.style.visibility = "hidden";
 
         const connectFormDataObject = {
-            user_id: user_id,
+            session_id: session_id,
             action: 'connect',
             form_data: formData
         };
@@ -231,7 +231,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         errorMessage.style.visibility = "hidden";
 
         const capacityFormDataObject = {
-            user_id: user_id,
+            session_id: session_id,
             action: 'capacity_request',
             form_data: formData
         };
@@ -254,7 +254,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         errorMessage.style.visibility = "hidden";
 
         const chainFormDataObject = {
-            user_id: user_id,
+            session_id: session_id,
             action: 'chain_fee',
             form_data: formData,
             selected_capacity: selectedCapacity,

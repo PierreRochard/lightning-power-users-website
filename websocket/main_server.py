@@ -8,25 +8,22 @@ from lnd_grpc import lnd_grpc
 from lnd_grpc.lnd_grpc import Client
 from website.logger import log
 from websocket.models.channel_opening_invoices import ChannelOpeningInvoices
-from websocket.models.users import Users
+from websocket.models.sessions import Sessions
 from websocket.utilities import get_server_id
 
 
 class MainServer(object):
     rpc: Client
 
-    def __init__(self, lnd_dir: str = None,
-                 lnd_network: str = 'mainnet',
-                 lnd_grpc_host: str = 'localhost',
-                 lnd_grpc_port: str = '10011'):
+    def __init__(self, grpc_host, grpc_port, tls_cert_path, macaroon_path):
         self.rpc = lnd_grpc.Client(
-            lnd_dir=lnd_dir,
-            network=lnd_network,
-            grpc_host=lnd_grpc_host,
-            grpc_port=lnd_grpc_port,
+            grpc_host=grpc_host,
+            grpc_port=grpc_port,
+            tls_cert_path=tls_cert_path,
+            macaroon_path=macaroon_path
         )
         self.channel_opening_invoices = ChannelOpeningInvoices()
-        self.users = Users(self.rpc)
+        self.sessions = Sessions(self.rpc)
         self.channel_opening_server = None
 
     async def run(self, websocket, path):
@@ -44,11 +41,11 @@ class MainServer(object):
                 )
                 return
 
-            user_id = data_from_client.get('user_id', None)
+            session_id = data_from_client.get('session_id', None)
             server_id = data_from_client.get('server_id', None)
-            if not user_id and not server_id:
+            if not session_id and not server_id:
                 log.error(
-                    'user_id and server_id missing',
+                    'session_id and server_id missing',
                     data_string_from_client=data_string_from_client
                 )
                 return
@@ -64,18 +61,18 @@ class MainServer(object):
                 )
                 return
             try:
-                UUID(user_id, version=4)
+                UUID(session_id, version=4)
             except ValueError:
                 log.error(
-                    'Invalid user_id',
+                    'Invalid session_id',
                     data_string_from_client=data_string_from_client
                 )
                 return
 
-            # User registration
-            if user_id and not server_id:
-                await self.users.handle_user_message(websocket, user_id,
-                                                     data_from_client)
+            # Session registration
+            if session_id and not server_id:
+                await self.sessions.handle_session_message(websocket, session_id,
+                                                           data_from_client)
 
             # Server action dispatching
             data_from_server = data_from_client
@@ -104,8 +101,8 @@ class MainServer(object):
                     return
 
                 log.debug('emit invoice_data', invoice_data=invoice_data)
-                await self.users.send(
-                    package['user_id'],
+                await self.sessions.send(
+                    package['session_id'],
                     invoice_data
                 )
 
@@ -117,7 +114,7 @@ class MainServer(object):
                 sat_per_byte = int(package['form_data']['transaction_fee_rate'])
                 data = dict(
                     server_id=get_server_id('main'),
-                    user_id=package['user_id'],
+                    session_id=package['session_id'],
                     type='open_channel',
                     remote_pubkey=package['parsed_pubkey'],
                     local_funding_amount=local_funding_amount,
@@ -132,14 +129,52 @@ class MainServer(object):
                     'open_channel_update': data_from_server.get(
                         'open_channel_update', None)
                 }
-                await self.users.send(
-                    user_id=user_id,
+                await self.sessions.send(
+                    session_id=session_id,
                     message=message
                 )
 
 
 if __name__ == '__main__':
-    main_server = MainServer()
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description='Main websocket server'
+    )
+
+    parser.add_argument(
+        '--macaroon',
+        '-m',
+        type=str
+    )
+
+    parser.add_argument(
+        '--tls',
+        '-t',
+        type=str
+    )
+
+    parser.add_argument(
+        '--port',
+        type=str,
+        help='Port for gRPC',
+        default='10009'
+    )
+
+    parser.add_argument(
+        '--host',
+        type=str,
+        help='Host IP address for gRPC',
+        default='127.0.0.1'
+    )
+
+    args = parser.parse_args()
+    main_server = MainServer(
+        grpc_host=args.host,
+        grpc_port=args.port,
+        macaroon_path=args.macaroon,
+        tls_cert_path=args.tls
+    )
     start_server = websockets.serve(main_server.run, 'localhost', 8765)
 
     asyncio.get_event_loop().run_until_complete(start_server)
