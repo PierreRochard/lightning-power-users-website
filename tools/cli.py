@@ -1,12 +1,13 @@
 import time
 
 from google.protobuf.json_format import MessageToDict
+# noinspection PyProtectedMember
 from grpc._channel import _Rendezvous
 
+from lnd_grpc import lnd_grpc
 from lnd_grpc.protos.rpc_pb2 import OpenStatusUpdate
 from tools.google_sheet import get_google_sheet_data
 from tools.node_operator import NodeOperator
-from tools.reconciliation import Reconciliation
 from website.logger import log
 
 if __name__ == '__main__':
@@ -151,12 +152,17 @@ if __name__ == '__main__':
         )
         node_operator.close_channels()
 
-    elif args.action == 'rec':
-        while True:
-            Reconciliation(
-                lnd_grpc_host=args.host,
-                lnd_grpc_port=args.port,
-                macaroon_path=args.macaroon,
-                tls_cert_path=args.tls
-            ).reconciliation()
-            time.sleep(60)
+    elif args.action == 'policy':
+        rpc = lnd_grpc.Client(
+            grpc_host=args.host,
+            grpc_port=args.port,
+            macaroon_path=args.macaroon,
+            tls_cert_path=args.tls
+        )
+        response = rpc.update_channel_policy(
+            base_fee_msat=0,
+            fee_rate=5000,
+            time_lock_delta=144
+        )
+        response_dict = MessageToDict(response)
+        log.info('update_channel_policy', response=response_dict)
