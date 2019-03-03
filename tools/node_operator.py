@@ -113,6 +113,7 @@ class NodeOperator(object):
         exclude_closed_and_pending = 0
         exclude_no_local = 0
         exclude_remote_skin_in_the_game = 0
+        exclude_new = 0
         log.info('Closing channels')
         for node in self.nodes.values():
             for channel in node.channels:
@@ -129,6 +130,7 @@ class NodeOperator(object):
                 today = datetime.now()
                 days_since_last_update = (today - last_update).days
                 if days_since_last_update < 7:
+                    exclude_new += 1
                     continue
                 log.info('Dormant channel', channel_data=channel.data)
                 force = not channel.is_active
@@ -145,7 +147,12 @@ class NodeOperator(object):
                 dormant_channels.append(channel)
         dormant_capacity = sum([c.local_balance for c in dormant_channels])
 
-        log.info('Dormant capacity', dormant_capacity=dormant_capacity,
+        log.info('Dormant capacity',
+                 exclude_closed_and_pending=exclude_closed_and_pending,
+                 exclude_no_local=exclude_no_local,
+                 exclude_remote_skin_in_the_game=exclude_remote_skin_in_the_game,
+                 exclude_new=exclude_new,
+                 dormant_capacity=dormant_capacity,
                  dormant_channels=len(dormant_channels))
 
     def identify_dupes(self):
@@ -154,6 +161,7 @@ class NodeOperator(object):
             if len(node.channels) < 3:
                 continue
             print(node)
+
 
 if __name__ == '__main__':
     import argparse
@@ -190,13 +198,15 @@ if __name__ == '__main__':
     parser.add_argument(
         '--size',
         '-s',
-        type=int
+        type=int,
+        default=16777215
     )
 
     parser.add_argument(
         '--fee',
         '-f',
-        type=int
+        type=int,
+        default=1
     )
 
     parser.add_argument(
