@@ -65,13 +65,11 @@ EXPECTED_BYTES = 500
 CAPACITY_CHOICES = [500000, 1000000, 2000000, 5000000, 16777215]
 
 CAPACITY_FEE_RATES = [
-    (Decimal('0'), 'One week free'),
-    (Decimal('0.03'), 'One month 3%'),
-    (Decimal('0.12'), 'Six months 12%'),
-    (Decimal('0.22'), 'One year 22%')
+    (Decimal('0'), 'Three days free'),
+    (Decimal('0.005'), 'Three days 0.5%'),
+    (Decimal('0.01'), 'Two weeks 1%'),
+    (Decimal('0.03'), 'One month 3%')
 ]
-
-
 
 if IS_WINDOWS:
     from keyring.backends.Windows import WinVaultKeyring

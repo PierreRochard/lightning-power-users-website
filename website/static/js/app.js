@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             capacityFeeRateSelect.disabled = false;
             console.log(capacityFeeRateSelect.value);
             if (Math.round(capacityFeeRateSelect.value * 100) === 0) {
-                capacityFeeRateSelect.value = 0.03;
+                capacityFeeRateSelect.value = 0.005;
             }
             capacityFeeRateSelect.options[0].disabled = true;
             document.querySelector('#selected-capacity').innerHTML = selectedCapacity.toLocaleString();
@@ -42,8 +42,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
 
         selectedCapacityFeeRate = parseFloat(capacityFeeRateSelect.selectedOptions[0].value);
-        document.querySelector('#capacity-fee-rate').innerHTML = selectedCapacityFeeRate.toLocaleString(undefined, {style: 'percent'});
-        document.querySelector('#capacity-fee-rate-usd').innerHTML = selectedCapacityFeeRate.toLocaleString(undefined, {style: 'percent'});
+        document.querySelector('#capacity-fee-rate').innerHTML = selectedCapacityFeeRate.toLocaleString(undefined, {style: 'percent', maximumFractionDigits: 1});
+        document.querySelector('#capacity-fee-rate-usd').innerHTML = selectedCapacityFeeRate.toLocaleString(undefined, {style: 'percent', maximumFractionDigits: 1});
 
         const capacityFee = Math.round(selectedCapacity * selectedCapacityFeeRate);
         const capacityFeeUsd = Math.round(capacityFee * pricePerSat * 100) / 100;
