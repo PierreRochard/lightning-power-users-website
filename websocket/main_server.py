@@ -22,6 +22,8 @@ class MainServer(object):
             tls_cert_path=tls_cert_path,
             macaroon_path=macaroon_path
         )
+        self.invoice_server_id = get_server_id('invoices')
+        self.channel_server_id = get_server_id('channels')
         self.channel_opening_invoices = ChannelOpeningInvoices()
         self.sessions = Sessions(self.rpc)
         self.channel_opening_server = None
@@ -69,27 +71,17 @@ class MainServer(object):
                 )
                 return
 
-            # Session registration
+            # Session actions
             if session_id and not server_id:
-                await self.sessions.handle_session_message(websocket, session_id,
-                                                           data_from_client)
+                await self.sessions.handle_session_message(
+                    websocket=websocket,
+                    session_id=session_id,
+                    data_from_client=data_from_client
+                )
 
             # Server action dispatching
-            data_from_server = data_from_client
-            if server_id == get_server_id('webapp'):
-                if data_from_server['type'] == 'inbound_capacity_request':
-                    self.channel_opening_invoices.add_invoice_package(
-                        r_hash=data_from_server['invoice']['r_hash'],
-                        package=data_from_server
-                    )
-                    log.debug(
-                        'Received from server',
-                        data_type='inbound_capacity_request'
-                    )
-                    return
-
-            elif server_id == get_server_id('invoices'):
-                invoice_data = data_from_server['invoice_data']
+            if server_id == self.invoice_server_id:
+                invoice_data = data_from_client['invoice_data']
                 package = self.channel_opening_invoices.get_invoice_package(
                     r_hash=invoice_data['r_hash']
                 )
@@ -122,11 +114,11 @@ class MainServer(object):
                 )
                 await self.channel_opening_server.send(json.dumps(data))
 
-            elif server_id == get_server_id('channels'):
+            elif server_id == self.channel_server_id:
                 self.channel_opening_server = websocket
                 message = {
-                    'error': data_from_server.get('error', None),
-                    'open_channel_update': data_from_server.get(
+                    'error': data_from_client.get('error', None),
+                    'open_channel_update': data_from_client.get(
                         'open_channel_update', None)
                 }
                 await self.sessions.send(

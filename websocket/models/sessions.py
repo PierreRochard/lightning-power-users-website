@@ -70,6 +70,7 @@ class Sessions(object):
 
     def __init__(self, rpc):
         self.rpc = rpc
+        self.peers = self.rpc.list_peers()
         self.connections = {}
 
     async def send(self, session_id: str, message):
@@ -133,21 +134,28 @@ class Sessions(object):
                 remote_pubkey_input=remote_pubkey_input
             )
             await session_websocket.send_error_message(
-                'Please enter your PubKey')
+                'Please enter your PubKey'
+            )
             return
 
-        full_remote_pubkey = remote_pubkey
         if '@' in remote_pubkey:
             # noinspection PyBroadException
             try:
                 remote_pubkey, remote_host = remote_pubkey.split('@')
-                log_session.debug('Parsed host', remote_host=remote_host)
+                log_session.debug(
+                    'Parsed host',
+                    remote_pubkey=remote_pubkey,
+                    remote_host=remote_host
+                )
             except:
-                log_session.error('Invalid PubKey format',
-                                  remote_pubkey=remote_pubkey,
-                                  exc_info=True)
+                log_session.error(
+                    'Invalid PubKey format',
+                    remote_pubkey=remote_pubkey,
+                    exc_info=True
+                )
                 await session_websocket.send_error_message(
-                    'Invalid PubKey format')
+                    error='Invalid PubKey format'
+                )
                 return
         else:
             remote_host = None
@@ -161,66 +169,72 @@ class Sessions(object):
 
         # Connect to peer
         if remote_host is None:
-            # noinspection PyBroadException
             try:
-                # Check if we're already connected
-                peers = self.rpc.list_peers()
-            except:
-                log_session.error(
-                    'Error with list_peers rpc',
-                    exc_info=True
+                peer = [p for p in self.peers if p.pub_key == remote_pubkey][0]
+                log_session.debug(
+                    'Already connected to peer',
+                    remote_pubkey=remote_pubkey,
+                    peer=MessageToDict(peer)
                 )
-                await session_websocket.send_error_message(
-                    'Error: please refresh and try again')
-                return
-
-            try:
-                peer = [p for p in peers if p.pub_key == remote_pubkey][0]
-                log_session.debug('Already connected to peer',
-                                  remote_pubkey=remote_pubkey,
-                                  peer=MessageToDict(peer))
                 await session_websocket.send_connected(
-                    remote_pubkey=remote_pubkey)
+                    remote_pubkey=remote_pubkey
+                )
                 return
             except IndexError:
                 log_session.debug(
                     'Unknown PubKey, please provide pubkey@host:port',
                     pubkey=remote_pubkey,
-                    exc_info=True)
+                    exc_info=True
+                )
                 await session_websocket.send_error_message(
                     'Unknown PubKey, please provide pubkey@host:port'
                 )
                 return
-        else:
-            try:
-                self.rpc.connect(address=full_remote_pubkey)
-                log_session.debug('Connected to peer',
-                                  remote_pubkey=remote_pubkey)
+
+        try:
+            self.rpc.connect_peer(
+                pubkey=remote_pubkey,
+                host=remote_host
+            )
+            log_session.debug(
+                'Connected to peer',
+                remote_pubkey=remote_pubkey
+            )
+            await session_websocket.send_connected(
+                remote_pubkey=remote_pubkey
+            )
+            return
+
+        except _Rendezvous as e:
+            details = e.details()
+            if 'already connected to peer' in details:
+                log_session.debug(
+                    'Already connected to peer',
+                    remote_pubkey=remote_pubkey
+                )
                 await session_websocket.send_connected(
-                    remote_pubkey=remote_pubkey)
+                    remote_pubkey=remote_pubkey
+                )
+                return
+            else:
+                log_session.error(
+                    'connect_peer',
+                    remote_pubkey=remote_pubkey,
+                    remote_host=remote_host,
+                    details=details,
+                    exc_info=True
+                )
+                await session_websocket.send_error_message(
+                    f'Error: {details}'
+                )
                 return
 
-            except _Rendezvous as e:
-                details = e.details()
-                if 'already connected to peer' in details:
-                    log_session.debug('Already connected to peer',
-                                      remote_pubkey=remote_pubkey)
-                    await session_websocket.send_connected(
-                        remote_pubkey=remote_pubkey)
-                    return
-                else:
-                    log_session.error('connect_peer',
-                                      remote_pubkey=remote_pubkey,
-                                      remote_host=remote_host,
-                                      details=details,
-                                      exc_info=True)
-                    await session_websocket.send_error_message(
-                        f'Error: {details}')
-                    return
-
     async def confirm_capacity(self, session_id, form_data):
-        log.debug('confirm_capacity', session_id=session_id,
-                  form_data=form_data)
+        log.debug(
+            'confirm_capacity',
+            session_id=session_id,
+            form_data=form_data
+        )
 
         session_websocket: Session = self.connections[session_id]
         await session_websocket.send_confirmed_capacity()
