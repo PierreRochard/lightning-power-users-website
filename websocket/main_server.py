@@ -3,12 +3,12 @@ import json
 from uuid import UUID
 
 import websockets
-
 from lnd_grpc import lnd_grpc
 from lnd_grpc.lnd_grpc import Client
+
 from website.logger import log
 from websocket.models.channel_opening_invoices import ChannelOpeningInvoices
-from websocket.models.sessions import Sessions
+from websocket.sessions.session_registry import SessionRegistry
 from websocket.utilities import get_server_id
 
 
@@ -25,7 +25,7 @@ class MainServer(object):
         self.invoice_server_id = get_server_id('invoices')
         self.channel_server_id = get_server_id('channels')
         self.channel_opening_invoices = ChannelOpeningInvoices()
-        self.sessions = Sessions(self.rpc)
+        self.sessions = SessionRegistry(self.rpc)
         self.channel_opening_server = None
 
     async def run(self, websocket, path):

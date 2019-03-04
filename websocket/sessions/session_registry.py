@@ -1,4 +1,4 @@
-import json
+from typing import Dict, Any
 
 from flask_qrcode import QRcode
 from google.protobuf.json_format import MessageToDict
@@ -10,71 +10,20 @@ from lnd_grpc.lnd_grpc import Client
 from website.constants import EXPECTED_BYTES
 from website.logger import log
 from websocket.constants import PUBKEY_LENGTH
+from websocket.sessions.session import Session
 
 
-class Session(object):
-    def __init__(self, ws, rpc):
-        self.ws = ws
-        self.rpc: Client = rpc
-
-    async def send(self, message):
-        message_string = json.dumps(message)
-        await self.ws.send(message_string)
-
-    async def send_connected(self, remote_pubkey: str):
-        channels = self.rpc.list_channels(public_only=True)
-        channels = [c for c in channels
-                    if c.remote_pubkey == remote_pubkey]
-        if not channels:
-            data = None
-        else:
-            data = {
-                'channel_count': len(channels)
-            }
-        message = {
-            'action': 'connected',
-            'data': data
-        }
-        await self.send(message=message)
-
-    async def send_registered(self):
-        message = {
-            'action': 'registered'
-        }
-        await self.send(message=message)
-
-    async def send_error_message(self, error: str):
-        message = {
-            'action': 'error_message',
-            'error': error
-        }
-        await self.send(message=message)
-
-    async def send_confirmed_capacity(self):
-        message = {
-            'action': 'confirmed_capacity',
-        }
-        await self.send(message=message)
-
-    async def send_payreq(self, payment_request, qrcode):
-        message = {
-            'action': 'payment_request',
-            'payment_request': payment_request,
-            'qrcode': qrcode
-        }
-        await self.send(message=message)
-
-
-class Sessions(object):
+class SessionRegistry(object):
+    sessions: Dict[str, Session]
     rpc: Client
 
     def __init__(self, rpc):
         self.rpc = rpc
         self.peers = self.rpc.list_peers()
-        self.connections = {}
+        self.sessions = {}
 
     async def send(self, session_id: str, message):
-        session = self.connections.get(session_id, None)
+        session = self.sessions.get(session_id, None)
         if session is None:
             return
         await session.send(message)
@@ -84,6 +33,9 @@ class Sessions(object):
                                      session_id,
                                      data_from_client):
         action = data_from_client.get('action', None)
+        if action is None:
+            return
+
         if action == 'register':
             await self.register(
                 session_id=session_id,
@@ -92,8 +44,8 @@ class Sessions(object):
         elif action == 'connect':
             log.debug('connect', data_from_client=data_from_client)
             form_data = data_from_client.get('form_data', None)
-            form_data_pubkey = [f for f in form_data if f['name'] == 'pubkey'][
-                0]
+            form_data_pubkey = [f for f in form_data
+                                if f['name'] == 'pubkey'][0]
             if not len(form_data_pubkey):
                 log.debug(
                     'Connect did not include valid form data',
@@ -107,7 +59,7 @@ class Sessions(object):
             await self.confirm_capacity(session_id, form_data)
         elif action == 'chain_fee':
             await self.chain_fee(session_id, data_from_client)
-        elif action is not None:
+        else:
             log.debug('Unknown action',
                       action=action,
                       data_from_client=data_from_client)
@@ -117,16 +69,16 @@ class Sessions(object):
             'Registering session_id',
             session_id=session_id
         )
-        self.connections[session_id] = Session(websocket, self.rpc)
-        await self.connections[session_id].send_registered()
+        self.sessions[session_id] = Session(websocket, self.rpc)
+        await self.sessions[session_id].send_registered()
 
     async def unregister(self, session_id: str):
-        del self.connections[session_id]
+        del self.sessions[session_id]
 
     async def connect_to_peer(self, session_id: str, remote_pubkey_input: str):
         logger = get_logger()
         log_session = logger.bind(session_id=session_id)
-        session_websocket: Session = self.connections[session_id]
+        session_websocket: Session = self.sessions[session_id]
         remote_pubkey = remote_pubkey_input.strip()
         if not remote_pubkey:
             log_session.debug(
@@ -236,7 +188,7 @@ class Sessions(object):
             form_data=form_data
         )
 
-        session_websocket: Session = self.connections[session_id]
+        session_websocket: Session = self.sessions[session_id]
         await session_websocket.send_confirmed_capacity()
 
     async def chain_fee(self, session_id, data):
@@ -266,5 +218,5 @@ class Sessions(object):
         uri = ':'.join(['lightning', payment_request])
         qrcode = QRcode.qrcode(uri, border=10)
 
-        session_websocket: Session = self.connections[session_id]
+        session_websocket: Session = self.sessions[session_id]
         await session_websocket.send_payreq(payment_request, qrcode)
