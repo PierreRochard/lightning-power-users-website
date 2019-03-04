@@ -29,8 +29,7 @@ class MainServer(object):
         self.channel_opening_server = None
 
     async def run(self, websocket, path):
-        while True:
-            data_string_from_client = await websocket.recv()
+        async for data_string_from_client in websocket:
 
             # noinspection PyBroadException
             try:
@@ -44,24 +43,13 @@ class MainServer(object):
                 return
 
             session_id = data_from_client.get('session_id', None)
-            server_id = data_from_client.get('server_id', None)
-            if not session_id and not server_id:
+            if session_id is None:
                 log.error(
-                    'session_id and server_id missing',
+                    'session_id is missing',
                     data_string_from_client=data_string_from_client
                 )
                 return
-            if server_id is not None and server_id not in [
-                get_server_id('main'),
-                get_server_id('invoices'),
-                get_server_id('channels'),
-                get_server_id('webapp')
-            ]:
-                log.error(
-                    'Invalid server_id',
-                    data_string_from_client=data_string_from_client
-                )
-                return
+
             try:
                 UUID(session_id, version=4)
             except ValueError:
@@ -71,16 +59,16 @@ class MainServer(object):
                 )
                 return
 
-            # Session actions
-            if session_id and not server_id:
+            server_id = data_from_client.get('server_id', None)
+
+            if server_id is None:
                 await self.sessions.handle_session_message(
                     websocket=websocket,
                     session_id=session_id,
                     data_from_client=data_from_client
                 )
-
-            # Server action dispatching
-            if server_id == self.invoice_server_id:
+                continue
+            elif server_id == self.invoice_server_id:
                 invoice_data = data_from_client['invoice_data']
                 package = self.channel_opening_invoices.get_invoice_package(
                     r_hash=invoice_data['r_hash']
@@ -90,7 +78,7 @@ class MainServer(object):
                         'r_hash not found in channel_opening_invoices',
                         invoice_data=invoice_data
                     )
-                    return
+                    continue
 
                 log.debug('emit invoice_data', invoice_data=invoice_data)
                 await self.sessions.send(
@@ -125,6 +113,12 @@ class MainServer(object):
                     session_id=session_id,
                     message=message
                 )
+            else:
+                log.error(
+                    'Invalid server_id',
+                    data_string_from_client=data_string_from_client
+                )
+                return
 
 
 if __name__ == '__main__':
