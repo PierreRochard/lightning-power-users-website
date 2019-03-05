@@ -1,15 +1,9 @@
-from typing import Dict, Any
+from typing import Dict
 
-from flask_qrcode import QRcode
-from google.protobuf.json_format import MessageToDict
-# noinspection PyProtectedMember
-from grpc._channel import _Rendezvous
-from structlog import get_logger
+from websockets import WebSocketServerProtocol
 
 from lnd_grpc.lnd_grpc import Client
-from website.constants import EXPECTED_BYTES
 from website.logger import log
-from websocket.constants import PUBKEY_LENGTH
 from websocket.sessions.session import Session
 
 
@@ -19,19 +13,12 @@ class SessionRegistry(object):
 
     def __init__(self, rpc):
         self.rpc = rpc
-        self.peers = self.rpc.list_peers()
+        self.peer_pubkeys = [p.pub_key for p in self.rpc.list_peers()]
         self.sessions = {}
 
-    async def send(self, session_id: str, message):
-        session = self.sessions.get(session_id, None)
-        if session is None:
-            return
-        await session.send(message)
-
     async def handle_session_message(self,
-                                     websocket,
-                                     session_id,
-                                     data_from_client):
+                                     session_websocket: WebSocketServerProtocol,
+                                     session_id: str, data_from_client: dict):
         action = data_from_client.get('action', None)
         if action is None:
             return
@@ -39,7 +26,7 @@ class SessionRegistry(object):
         if action == 'register':
             await self.register(
                 session_id=session_id,
-                websocket=websocket
+                session_websocket=session_websocket
             )
         elif action == 'connect':
             log.debug('connect', data_from_client=data_from_client)
@@ -53,170 +40,32 @@ class SessionRegistry(object):
                 )
                 return
             pubkey = form_data_pubkey.get('value', '').strip()
-            await self.connect_to_peer(session_id, pubkey)
+            await self.sessions[session_id].connect_to_peer(pubkey)
         elif action == 'capacity_request':
             form_data = data_from_client.get('form_data', None)
-            await self.confirm_capacity(session_id, form_data)
+            await self.sessions[session_id].confirm_capacity(form_data)
         elif action == 'chain_fee':
-            await self.chain_fee(session_id, data_from_client)
+            await self.sessions[session_id].chain_fee(data_from_client)
         else:
-            log.debug('Unknown action',
-                      action=action,
-                      data_from_client=data_from_client)
+            log.debug(
+                'Unknown action',
+                action=action,
+                data_from_client=data_from_client
+            )
 
-    async def register(self, session_id: str, websocket):
+    async def register(self, session_id: str,
+                       session_websocket: WebSocketServerProtocol):
         log.info(
             'Registering session_id',
             session_id=session_id
         )
-        self.sessions[session_id] = Session(websocket, self.rpc)
+        self.sessions[session_id] = Session(
+            session_id=session_id,
+            ws=session_websocket,
+            rpc=self.rpc,
+            peer_pubkeys=self.peer_pubkeys
+        )
         await self.sessions[session_id].send_registered()
 
     async def unregister(self, session_id: str):
         del self.sessions[session_id]
-
-    async def connect_to_peer(self, session_id: str, remote_pubkey_input: str):
-        logger = get_logger()
-        log_session = logger.bind(session_id=session_id)
-        session_websocket: Session = self.sessions[session_id]
-        remote_pubkey = remote_pubkey_input.strip()
-        if not remote_pubkey:
-            log_session.debug(
-                'Pressed connect button but no remote_pubkey found',
-                remote_pubkey_input=remote_pubkey_input
-            )
-            await session_websocket.send_error_message(
-                'Please enter your PubKey'
-            )
-            return
-
-        if '@' in remote_pubkey:
-            # noinspection PyBroadException
-            try:
-                remote_pubkey, remote_host = remote_pubkey.split('@')
-                log_session.debug(
-                    'Parsed host',
-                    remote_pubkey=remote_pubkey,
-                    remote_host=remote_host
-                )
-            except:
-                log_session.error(
-                    'Invalid PubKey format',
-                    remote_pubkey=remote_pubkey,
-                    exc_info=True
-                )
-                await session_websocket.send_error_message(
-                    error='Invalid PubKey format'
-                )
-                return
-        else:
-            remote_host = None
-
-        if len(remote_pubkey) != PUBKEY_LENGTH:
-            log_session.error('Invalid PubKey length', pubkey=remote_pubkey)
-            await session_websocket.send_error_message(
-                f'Invalid PubKey length, expected {PUBKEY_LENGTH} characters'
-            )
-            return
-
-        # Connect to peer
-        if remote_host is None:
-            try:
-                peer = [p for p in self.peers if p.pub_key == remote_pubkey][0]
-                log_session.debug(
-                    'Already connected to peer',
-                    remote_pubkey=remote_pubkey,
-                    peer=MessageToDict(peer)
-                )
-                await session_websocket.send_connected(
-                    remote_pubkey=remote_pubkey
-                )
-                return
-            except IndexError:
-                log_session.debug(
-                    'Unknown PubKey, please provide pubkey@host:port',
-                    pubkey=remote_pubkey,
-                    exc_info=True
-                )
-                await session_websocket.send_error_message(
-                    'Unknown PubKey, please provide pubkey@host:port'
-                )
-                return
-
-        try:
-            self.rpc.connect_peer(
-                pubkey=remote_pubkey,
-                host=remote_host
-            )
-            log_session.debug(
-                'Connected to peer',
-                remote_pubkey=remote_pubkey
-            )
-            await session_websocket.send_connected(
-                remote_pubkey=remote_pubkey
-            )
-            return
-
-        except _Rendezvous as e:
-            details = e.details()
-            if 'already connected to peer' in details:
-                log_session.debug(
-                    'Already connected to peer',
-                    remote_pubkey=remote_pubkey
-                )
-                await session_websocket.send_connected(
-                    remote_pubkey=remote_pubkey
-                )
-                return
-            else:
-                log_session.error(
-                    'connect_peer',
-                    remote_pubkey=remote_pubkey,
-                    remote_host=remote_host,
-                    details=details,
-                    exc_info=True
-                )
-                await session_websocket.send_error_message(
-                    f'Error: {details}'
-                )
-                return
-
-    async def confirm_capacity(self, session_id, form_data):
-        log.debug(
-            'confirm_capacity',
-            session_id=session_id,
-            form_data=form_data
-        )
-
-        session_websocket: Session = self.sessions[session_id]
-        await session_websocket.send_confirmed_capacity()
-
-    async def chain_fee(self, session_id, data):
-        log.debug('chain_fee', session_id=session_id, data=data)
-
-        selected_capacity = data.get('selected_capacity', None)
-        selected_capacity_rate = data.get('selected_capacity_rate')
-        selected_chain_fee = data.get('selected_chain_fee')
-
-        capacity_fee = int(selected_capacity * selected_capacity_rate)
-
-        transaction_fee = selected_chain_fee * EXPECTED_BYTES
-        total_fee = capacity_fee + transaction_fee
-
-        memo = 'Lightning Power Users capacity request: '
-        if selected_capacity == 0:
-            memo += 'reciprocate'
-        else:
-            memo += f'{selected_capacity} @ {selected_capacity_rate}'
-
-        invoice = self.rpc.add_invoice(
-            value=int(total_fee),
-            memo=memo
-        )
-        invoice = MessageToDict(invoice)
-        payment_request = invoice['payment_request']
-        uri = ':'.join(['lightning', payment_request])
-        qrcode = QRcode.qrcode(uri, border=10)
-
-        session_websocket: Session = self.sessions[session_id]
-        await session_websocket.send_payreq(payment_request, qrcode)

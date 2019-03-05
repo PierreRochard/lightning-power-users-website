@@ -63,7 +63,7 @@ class MainServer(object):
 
             if server_id is None:
                 await self.sessions.handle_session_message(
-                    websocket=websocket,
+                    session_websocket=websocket,
                     session_id=session_id,
                     data_from_client=data_from_client
                 )

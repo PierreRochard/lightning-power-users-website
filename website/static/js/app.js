@@ -2,6 +2,7 @@
 document.addEventListener('DOMContentLoaded', async function () {
 
     let selectedCapacity;
+    let selectedCapacityText;
     let selectedCapacityFeeRate;
     let selectedTransactionFeeRate;
 
@@ -20,8 +21,15 @@ document.addEventListener('DOMContentLoaded', async function () {
         const transactionFeeRateSelect = document.querySelector('select[name="transaction_fee_rate"]');
 
         selectedCapacity = parseInt(capacitySelect.selectedOptions[0].value);
+        selectedCapacityText = capacitySelect.selectedOptions[0].textContent;
         const selectedCapacityUsd = Math.round(selectedCapacity * pricePerSat * 100) / 100;
-        if (selectedCapacity > 0) {
+        if (selectedCapacityText.startsWith('Reciprocate')) {
+            capacityFeeRateSelect.options[0].disabled = false;
+            capacityFeeRateSelect.value = 0;
+            capacityFeeRateSelect.disabled = true;
+            document.querySelector('#selected-capacity').innerHTML = '-';
+            document.querySelector('#selected-capacity-usd').innerHTML = '-';
+        } else {
             capacityFeeRateSelect.disabled = false;
             console.log(capacityFeeRateSelect.value);
             if (Math.round(capacityFeeRateSelect.value * 100) === 0) {
@@ -33,12 +41,6 @@ document.addEventListener('DOMContentLoaded', async function () {
                 maximumFractionDigits: 2,
                 minimumFractionDigits: 2
             });
-        } else {
-            capacityFeeRateSelect.options[0].disabled = false;
-            capacityFeeRateSelect.value = 0;
-            capacityFeeRateSelect.disabled = true;
-            document.querySelector('#selected-capacity').innerHTML = '-';
-            document.querySelector('#selected-capacity-usd').innerHTML = '-';
         }
 
         selectedCapacityFeeRate = parseFloat(capacityFeeRateSelect.selectedOptions[0].value);
@@ -139,6 +141,16 @@ document.addEventListener('DOMContentLoaded', async function () {
                 break;
             case "connected":
                 console.log("connected");
+                if (msg.data === null) {
+                    capacitySelect.options[0].disabled = true;
+                    capacitySelect.value = 500000;
+                    changeEventHandler();
+                } else {
+                    const reciprocateAmount = parseInt(msg.data.capacity);
+                    const reciprocateAmountString = reciprocateAmount.toLocaleString();
+                    capacitySelect.options[0].value = reciprocateAmount;
+                    capacitySelect.options[0].textContent = 'Reciprocate ' + reciprocateAmountString;
+                }
                 progressBar.style.width = "0%";
                 progressBar.textContent = "";
                 connectTabContent.classList.remove('show');
