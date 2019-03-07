@@ -161,7 +161,7 @@ if __name__ == '__main__':
         )
         response = rpc.update_channel_policy(
             base_fee_msat=1000,
-            fee_rate=0.0001,
+            fee_rate=0.000001,
             time_lock_delta=144
         )
         response_dict = MessageToDict(response)
