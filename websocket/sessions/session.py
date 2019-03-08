@@ -44,6 +44,12 @@ class Session(object):
 
     async def send_connected(self, remote_pubkey: str):
         data = ChannelQueries.get_peer_channel_totals(remote_pubkey)
+        if data['count'] > 1:
+            await self.send_error_message(
+                error=f'{data["count"]} channels already open, please close {data["count"]-1}'
+            )
+            return
+        self.log.debug('get_peer_channel_totals', data=data)
         message = {
             'action': 'connected',
             'data': data
