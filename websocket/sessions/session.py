@@ -136,10 +136,7 @@ class Session(object):
                 return
 
         try:
-            self.rpc.connect_peer(
-                pubkey=remote_pubkey,
-                host=remote_host
-            )
+            self.rpc.connect('@'.join([remote_pubkey, remote_host]))
             self.log.debug(
                 'Connected to peer',
                 remote_pubkey=remote_pubkey
