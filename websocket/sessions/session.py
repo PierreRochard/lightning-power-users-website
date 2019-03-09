@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 from typing import List
 
 from flask_qrcode import QRcode
@@ -18,8 +19,11 @@ from websocket.queries.channel_queries import ChannelQueries
 
 
 class Session(object):
-    session_id: str
+    reciprocate_capacity: int
+    remote_host: str
+    remote_pubkey: str
     rpc: Client
+    session_id: str
     ws: WebSocketServerProtocol
 
     def __init__(self,
@@ -34,6 +38,8 @@ class Session(object):
 
         self.remote_host = None
         self.remote_pubkey = None
+
+        self.reciprocate_capacity = None
 
         logger = get_logger()
         self.log = logger.bind(session_id=session_id)
@@ -68,13 +74,14 @@ class Session(object):
                 )
                 return
 
+            self.reciprocate_capacity = int(data['capacity'])
+
         with session_scope() as session:
             new_request = InboundCapacityRequest()
             new_request.session_id = self.session_id
             new_request.remote_pubkey = self.remote_pubkey
             new_request.remote_host = self.remote_host
-            # if data
-            # new_request.capacity =
+            session.add(new_request)
 
         message = {
             'action': 'connected',
@@ -202,6 +209,22 @@ class Session(object):
             session_id=self.session_id,
             form_data=form_data
         )
+        with session_scope() as session:
+            request: InboundCapacityRequest = (
+                session.query(InboundCapacityRequest)
+                .filter(InboundCapacityRequest.session_id == self.session_id)
+                .order_by(InboundCapacityRequest.updated_at.desc())
+                .first()
+            )
+            request.capacity = int([f['value'] for f in form_data
+                                    if f['name'] == 'capacity'][0])
+            try:
+                request.capacity_fee_rate = Decimal([f['value'] for f in form_data
+                                                     if f['name'] == 'capacity_fee_rate'][0])
+            except IndexError:
+                request.capacity_fee_rate = 0
+                assert request.capacity == self.reciprocate_capacity
+            request.capacity_fee = request.capacity * request.capacity_fee_rate
         await self.send_confirmed_capacity()
 
     async def chain_fee(self, data: dict):
