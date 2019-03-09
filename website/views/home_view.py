@@ -6,8 +6,8 @@ from flask import render_template, session
 from flask_admin import BaseView, expose
 
 from website.constants import EXPECTED_BYTES
+from website.forms.request_capacity_form import get_request_capacity_form
 from website.utilities.cache.cache import get_latest
-from website.views.request_capacity_view import get_request_capacity_form
 from websocket.constants import DEFAULT_WEBSOCKET_URL
 
 
