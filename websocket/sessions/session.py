@@ -13,7 +13,7 @@ from lnd_grpc.lnd_grpc import Client
 from lnd_sql import session_scope
 from lnd_sql.models.contrib.inbound_capacity_request import \
     InboundCapacityRequest
-from website.constants import EXPECTED_BYTES
+from website.constants import EXPECTED_BYTES, CAPACITY_FEE_RATES
 from websocket.constants import PUBKEY_LENGTH
 from websocket.queries.channel_queries import ChannelQueries
 
@@ -221,6 +221,7 @@ class Session(object):
             try:
                 request.capacity_fee_rate = Decimal([f['value'] for f in form_data
                                                      if f['name'] == 'capacity_fee_rate'][0])
+                assert request.capacity_fee_rate in [c[0] for c in CAPACITY_FEE_RATES]
             except IndexError:
                 request.capacity_fee_rate = 0
                 assert request.capacity == self.reciprocate_capacity
@@ -233,6 +234,13 @@ class Session(object):
             session_id=self.session_id,
             data=data
         )
+        with session_scope() as session:
+            request: InboundCapacityRequest = (
+                session.query(InboundCapacityRequest)
+                    .filter(InboundCapacityRequest.session_id == self.session_id)
+                    .order_by(InboundCapacityRequest.updated_at.desc())
+                    .first()
+            )
 
         selected_capacity = data.get('selected_capacity', None)
         selected_capacity_rate = data.get('selected_capacity_rate')
