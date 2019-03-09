@@ -1,6 +1,6 @@
 from pprint import pformat
 
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, Float, cast
 from sqlalchemy.orm.exc import NoResultFound
 
 from lnd_sql import session_scope
@@ -17,7 +17,10 @@ class ChannelQueries(object):
                         .query(
                             OpenChannels.remote_pubkey,
                             func.count(OpenChannels.id).label('count'),
-                            func.sum(OpenChannels.capacity).label('capacity')
+                            func.sum(OpenChannels.capacity).label('capacity'),
+                            cast(
+                                func.sum(OpenChannels.local_balance)
+                                / func.sum(OpenChannels.capacity), Float).label('balance')
                         )
                         .filter(
                             and_(
@@ -42,7 +45,8 @@ class ChannelQueries(object):
                     .query(
                     OpenChannels.remote_pubkey,
                     func.count(OpenChannels.id).label('count'),
-                    func.sum(OpenChannels.capacity).label('capacity')
+                    func.sum(OpenChannels.capacity).label('capacity'),
+                    cast(func.sum(OpenChannels.local_balance) / func.sum(OpenChannels.capacity), Float).label('balance')
                 )
                     .order_by(func.count(OpenChannels.id))
                     .order_by(func.sum(OpenChannels.capacity).desc())

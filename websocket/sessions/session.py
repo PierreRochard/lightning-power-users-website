@@ -9,6 +9,9 @@ from structlog import get_logger
 from websockets import WebSocketServerProtocol
 
 from lnd_grpc.lnd_grpc import Client
+from lnd_sql import session_scope
+from lnd_sql.models.contrib.inbound_capacity_request import \
+    InboundCapacityRequest
 from website.constants import EXPECTED_BYTES
 from websocket.constants import PUBKEY_LENGTH
 from websocket.queries.channel_queries import ChannelQueries
@@ -29,6 +32,9 @@ class Session(object):
         self.rpc = rpc
         self.peer_pubkeys = peer_pubkeys
 
+        self.remote_host = None
+        self.remote_pubkey = None
+
         logger = get_logger()
         self.log = logger.bind(session_id=session_id)
 
@@ -42,14 +48,34 @@ class Session(object):
         }
         await self.send(message=message)
 
-    async def send_connected(self, remote_pubkey: str):
-        data = ChannelQueries.get_peer_channel_totals(remote_pubkey)
-        if data['count'] > 1:
-            await self.send_error_message(
-                error=f'{data["count"]} channels already open, please close {data["count"]-1}'
-            )
-            return
+    async def send_connected(self):
+        data = ChannelQueries.get_peer_channel_totals(self.remote_pubkey)
         self.log.debug('get_peer_channel_totals', data=data)
+
+        if data is not None:
+            if data['count'] > 1:
+                await self.send_error_message(
+                    error=f'{data["count"]} channels already open between us, '
+                    f'please close {data["count"]-1}'
+                )
+                return
+
+            if data['balance'] is not None and data['balance'] > 0.7:
+                await self.send_error_message(
+                    error='Our existing channel already has inbound capacity '
+                          'in your favor, please close it to request more '
+                          'capacity'
+                )
+                return
+
+        with session_scope() as session:
+            new_request = InboundCapacityRequest()
+            new_request.session_id = self.session_id
+            new_request.remote_pubkey = self.remote_pubkey
+            new_request.remote_host = self.remote_host
+            # if data
+            # new_request.capacity =
+
         message = {
             'action': 'connected',
             'data': data
@@ -78,8 +104,8 @@ class Session(object):
         await self.send(message=message)
 
     async def connect_to_peer(self, remote_pubkey_input: str):
-        remote_pubkey = remote_pubkey_input.strip()
-        if not remote_pubkey:
+        self.remote_pubkey = remote_pubkey_input.strip()
+        if not self.remote_pubkey:
             self.log.debug(
                 'Pressed connect button but no remote_pubkey found',
                 remote_pubkey_input=remote_pubkey_input
@@ -89,19 +115,19 @@ class Session(object):
             )
             return
 
-        if '@' in remote_pubkey:
+        if '@' in self.remote_pubkey:
             # noinspection PyBroadException
             try:
-                remote_pubkey, remote_host = remote_pubkey.split('@')
+                self.remote_pubkey, self.remote_host = self.remote_pubkey.split('@')
                 self.log.debug(
                     'Parsed host',
-                    remote_pubkey=remote_pubkey,
-                    remote_host=remote_host
+                    remote_pubkey=self.remote_pubkey,
+                    remote_host=self.remote_host
                 )
             except:
                 self.log.error(
                     'Invalid PubKey format',
-                    remote_pubkey=remote_pubkey,
+                    remote_pubkey=self.remote_pubkey,
                     exc_info=True
                 )
                 await self.send_error_message(
@@ -109,31 +135,29 @@ class Session(object):
                 )
                 return
         else:
-            remote_host = None
+            self.remote_host = None
 
-        if len(remote_pubkey) != PUBKEY_LENGTH:
-            self.log.error('Invalid PubKey length', pubkey=remote_pubkey)
+        if len(self.remote_pubkey) != PUBKEY_LENGTH:
+            self.log.error('Invalid PubKey length', pubkey=self.remote_pubkey)
             await self.send_error_message(
                 f'Invalid PubKey length, expected {PUBKEY_LENGTH} characters'
             )
             return
 
         # Connect to peer
-        if remote_host is None:
+        if self.remote_host is None:
             try:
-                assert [p for p in self.peer_pubkeys if p == remote_pubkey][0]
+                assert [p for p in self.peer_pubkeys if p == self.remote_pubkey][0]
                 self.log.debug(
                     'Already connected to peer',
-                    remote_pubkey=remote_pubkey
+                    remote_pubkey=self.remote_pubkey
                 )
-                await self.send_connected(
-                    remote_pubkey=remote_pubkey
-                )
+                await self.send_connected()
                 return
             except IndexError:
                 self.log.debug(
                     'Unknown PubKey, please provide pubkey@host:port',
-                    pubkey=remote_pubkey,
+                    pubkey=self.remote_pubkey,
                     exc_info=True
                 )
                 await self.send_error_message(
@@ -142,14 +166,12 @@ class Session(object):
                 return
 
         try:
-            self.rpc.connect('@'.join([remote_pubkey, remote_host]))
+            self.rpc.connect('@'.join([self.remote_pubkey, self.remote_host]))
             self.log.debug(
                 'Connected to peer',
-                remote_pubkey=remote_pubkey
+                remote_pubkey=self.remote_pubkey
             )
-            await self.send_connected(
-                remote_pubkey=remote_pubkey
-            )
+            await self.send_connected()
             return
 
         except _Rendezvous as e:
@@ -157,17 +179,15 @@ class Session(object):
             if 'already connected to peer' in details:
                 self.log.debug(
                     'Already connected to peer',
-                    remote_pubkey=remote_pubkey
+                    remote_pubkey=self.remote_pubkey
                 )
-                await self.send_connected(
-                    remote_pubkey=remote_pubkey
-                )
+                await self.send_connected()
                 return
             else:
                 self.log.error(
                     'connect_peer',
-                    remote_pubkey=remote_pubkey,
-                    remote_host=remote_host,
+                    remote_pubkey=self.remote_pubkey,
+                    remote_host=self.remote_host,
                     details=details,
                     exc_info=True
                 )
