@@ -113,6 +113,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     const paymentTabContent = document.getElementById('payment-tab-content');
 
     const qrCodeDiv = document.getElementById('qrcode-div');
+    const payWithJoule = document.getElementById('pay-with-joule');
     const payreqInput = document.getElementById('payreq-input');
 
     const paymentInfo = document.getElementById('payment-info');
@@ -182,6 +183,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 image.src = msg.qrcode;
                 qrCodeDiv.appendChild(image);
 
+                payWithJoule.href = msg.uri;
                 payreqInput.value = msg.payment_request;
 
                 chainTabContent.classList.remove('show');

@@ -101,11 +101,12 @@ class Session(object):
         }
         await self.send(message=message)
 
-    async def send_payreq(self, payment_request, qrcode):
+    async def send_payreq(self, payment_request, uri, qrcode):
         message = {
             'action': 'payment_request',
             'payment_request': payment_request,
-            'qrcode': qrcode
+            'qrcode': qrcode,
+            'uri': uri
         }
         await self.send(message=message)
 
@@ -265,5 +266,8 @@ class Session(object):
                             inbound_capacity_request.payment_request])
             qrcode = QRcode.qrcode(uri, border=10)
 
-            await self.send_payreq(inbound_capacity_request.payment_request,
-                                   qrcode)
+            await self.send_payreq(
+                payment_request=inbound_capacity_request.payment_request,
+                uri=uri,
+                qrcode=qrcode
+            )
