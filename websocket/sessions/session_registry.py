@@ -16,9 +16,12 @@ class SessionRegistry(object):
         self.peer_pubkeys = [p.pub_key for p in self.rpc.list_peers()]
         self.sessions = {}
 
-    async def handle_session_message(self,
-                                     session_websocket: WebSocketServerProtocol,
-                                     session_id: str, data_from_client: dict):
+    async def handle_session_message(
+            self,
+            session_id: str,
+            data_from_client: dict,
+            session_websocket: WebSocketServerProtocol = None
+    ):
         action = data_from_client.get('action', None)
         if action is None:
             return

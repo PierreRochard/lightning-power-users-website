@@ -36,9 +36,12 @@ class InvoiceEmitter(object):
         async with websockets.connect(websocket_url) as websocket:
             invoice_subscription = self.rpc.subscribe_invoices(settle_index=1)
             for invoice in invoice_subscription:
+                invoice_data = MessageToDict(invoice)
+                invoice_data['r_hash'] = invoice.r_hash.hex()
+                invoice_data['r_preimage'] = invoice.r_preimage.hex()
                 data = {
                     'server_id': get_server_id('invoices'),
-                    'invoice_data': MessageToDict(invoice)
+                    'invoice_data': invoice_data
                 }
                 data_string = json.dumps(data)
                 log.debug('sending websocket message', data=data)

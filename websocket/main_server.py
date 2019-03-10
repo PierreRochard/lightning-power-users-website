@@ -3,8 +3,12 @@ import json
 from uuid import UUID
 
 import websockets
+from sqlalchemy.orm.exc import NoResultFound
+
 from lnd_grpc import lnd_grpc
 from lnd_grpc.lnd_grpc import Client
+from lnd_sql import session_scope
+from lnd_sql.models import InboundCapacityRequest
 
 from website.logger import log
 from websocket.models.channel_opening_invoices import ChannelOpeningInvoices
@@ -70,36 +74,35 @@ class MainServer(object):
                 continue
             elif server_id == self.invoice_server_id:
                 invoice_data = data_from_client['invoice_data']
-                package = self.channel_opening_invoices.get_invoice_package(
-                    r_hash=invoice_data['r_hash']
-                )
-                if package is None:
-                    log.debug(
-                        'r_hash not found in channel_opening_invoices',
-                        invoice_data=invoice_data
+                with session_scope() as session:
+                    try:
+                        inbound_capacity_request: InboundCapacityRequest = (
+                            session.query(InboundCapacityRequest)
+                            .filter(InboundCapacityRequest.invoice_r_hash == invoice_data['r_hash'])
+                            .one()
+                        )
+                    except NoResultFound:
+                        log.debug(
+                            'r_hash not found in inbound_capacity_request table',
+                            data_from_client=data_from_client
+                        )
+                        continue
+
+
+                    log.debug('emit invoice_data', invoice_data=invoice_data)
+                    await self.sessions.handle_session_message(
+                        session_id=inbound_capacity_request.session_id,
+                        data_from_client=invoice_data
                     )
-                    continue
 
-                log.debug('emit invoice_data', invoice_data=invoice_data)
-                await self.sessions.send(
-                    package['session_id'],
-                    invoice_data
-                )
-
-                if package.get('reciprocation_capacity', None):
-                    local_funding_amount = package['reciprocation_capacity']
-                else:
-                    local_funding_amount = int(package['form_data']['capacity'])
-
-                sat_per_byte = int(package['form_data']['transaction_fee_rate'])
-                data = dict(
-                    server_id=get_server_id('main'),
-                    session_id=package['session_id'],
-                    type='open_channel',
-                    remote_pubkey=package['parsed_pubkey'],
-                    local_funding_amount=local_funding_amount,
-                    sat_per_byte=sat_per_byte
-                )
+                    data = dict(
+                        server_id=get_server_id('main'),
+                        session_id=inbound_capacity_request.session_id,
+                        type='open_channel',
+                        remote_pubkey=inbound_capacity_request.remote_pubkey,
+                        local_funding_amount=inbound_capacity_request.capacity,
+                        sat_per_byte=inbound_capacity_request.transaction_fee_rate
+                    )
                 await self.channel_opening_server.send(json.dumps(data))
 
             elif server_id == self.channel_server_id:
