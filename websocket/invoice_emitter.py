@@ -1,30 +1,35 @@
 import asyncio
 import json
 
-import websockets
 from google.protobuf.json_format import MessageToDict
+import websockets
 
 from lnd_grpc import lnd_grpc
 from website.logger import log
-from websocket.constants import DEFAULT_WEBSOCKET_URL
+from websocket.constants import MAIN_SERVER_WEBSOCKET_URL
 from websocket.utilities import get_server_id
 
 
 class InvoiceEmitter(object):
     def __init__(self,
-                 websocket_url: str = DEFAULT_WEBSOCKET_URL,
                  lnd_dir: str = None,
                  lnd_network: str = 'mainnet',
                  lnd_grpc_host: str = 'localhost',
-                 lnd_grpc_port: str = '10011'):
+                 lnd_grpc_port: str = '10009',
+                 tls_cert_path: str = None,
+                 macaroon_path: str = None):
         self.rpc = lnd_grpc.Client(
             lnd_dir=lnd_dir,
             network=lnd_network,
             grpc_host=lnd_grpc_host,
             grpc_port=lnd_grpc_port,
+            macaroon_path=macaroon_path,
+            tls_cert_path=tls_cert_path
         )
 
-        asyncio.get_event_loop().run_until_complete(self.send_to_server(websocket_url))
+        asyncio.get_event_loop().run_until_complete(
+            self.send_to_server(MAIN_SERVER_WEBSOCKET_URL)
+        )
         asyncio.get_event_loop().run_forever()
 
     async def send_to_server(self, websocket_url: str):
@@ -48,20 +53,20 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--verbose',
-        '-v',
-        action='store_true',
-        help='Display additional information for debugging'
+        '--macaroon',
+        '-m',
+        type=str
     )
 
     parser.add_argument(
-        '--websocket_url',
-        '-w',
-        type=str,
-        help='The server websocket url',
-        default=DEFAULT_WEBSOCKET_URL
+        '--tls',
+        '-t',
+        type=str
     )
 
     args = parser.parse_args()
 
-    InvoiceEmitter(websocket_url=args.websocket_url)
+    InvoiceEmitter(
+        macaroon_path=args.macaroon,
+        tls_cert_path=args.tls
+    )

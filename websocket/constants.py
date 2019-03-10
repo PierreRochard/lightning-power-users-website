@@ -1,3 +1,3 @@
-DEFAULT_WEBSOCKET_URL = 'ws://localhost:8765'
+MAIN_SERVER_WEBSOCKET_URL = 'ws://localhost:8765'
 
 PUBKEY_LENGTH = 66
