@@ -45,7 +45,8 @@ class SessionRegistry(object):
             form_data = data_from_client.get('form_data', None)
             await self.sessions[session_id].confirm_capacity(form_data)
         elif action == 'chain_fee':
-            await self.sessions[session_id].chain_fee(data_from_client)
+            form_data = data_from_client.get('form_data', None)
+            await self.sessions[session_id].chain_fee(form_data)
         else:
             log.debug(
                 'Unknown action',

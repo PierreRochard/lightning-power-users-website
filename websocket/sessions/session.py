@@ -3,7 +3,6 @@ from decimal import Decimal
 from typing import List
 
 from flask_qrcode import QRcode
-from google.protobuf.json_format import MessageToDict
 # noinspection PyProtectedMember
 from grpc._channel import _Rendezvous
 from structlog import get_logger
@@ -228,42 +227,43 @@ class Session(object):
             request.capacity_fee = request.capacity * request.capacity_fee_rate
         await self.send_confirmed_capacity()
 
-    async def chain_fee(self, data: dict):
+    async def chain_fee(self, form_data):
         self.log.debug(
             'chain_fee',
             session_id=self.session_id,
-            data=data
+            form_data=form_data
         )
         with session_scope() as session:
-            request: InboundCapacityRequest = (
+            inbound_capacity_request: InboundCapacityRequest = (
                 session.query(InboundCapacityRequest)
                     .filter(InboundCapacityRequest.session_id == self.session_id)
                     .order_by(InboundCapacityRequest.updated_at.desc())
                     .first()
             )
 
-        selected_capacity = data.get('selected_capacity', None)
-        selected_capacity_rate = data.get('selected_capacity_rate')
-        selected_chain_fee = data.get('selected_chain_fee')
+            inbound_capacity_request.transaction_fee_rate = int([f['value'] for f in form_data
+                                    if f['name'] == 'transaction_fee_rate'][0])
+            assert inbound_capacity_request.transaction_fee_rate > 0
+            inbound_capacity_request.expected_bytes = EXPECTED_BYTES
+            inbound_capacity_request.transaction_fee = inbound_capacity_request.transaction_fee_rate * EXPECTED_BYTES
+            inbound_capacity_request.total_fee = inbound_capacity_request.capacity_fee + inbound_capacity_request.transaction_fee
 
-        capacity_fee = int(selected_capacity * selected_capacity_rate)
+            memo = 'Lightning Power Users capacity request: '
+            if inbound_capacity_request.capacity_fee_rate:
+                memo += f'{inbound_capacity_request.capacity} ' \
+                    f'@ {inbound_capacity_request.capacity_fee_rate}'
+            else:
+                memo += f'reciprocate {inbound_capacity_request.capacity}'
 
-        transaction_fee = selected_chain_fee * EXPECTED_BYTES
-        total_fee = capacity_fee + transaction_fee
+            invoice = self.rpc.add_invoice(
+                value=int(inbound_capacity_request.total_fee),
+                memo=memo
+            )
+            inbound_capacity_request.payment_request = invoice.payment_request
+            inbound_capacity_request.invoice_r_hash = invoice.r_hash.hex()
+            uri = ':'.join(['lightning',
+                            inbound_capacity_request.payment_request])
+            qrcode = QRcode.qrcode(uri, border=10)
 
-        memo = 'Lightning Power Users capacity request: '
-        if selected_capacity == 0:
-            memo += 'reciprocate'
-        else:
-            memo += f'{selected_capacity} @ {selected_capacity_rate}'
-
-        invoice = self.rpc.add_invoice(
-            value=int(total_fee),
-            memo=memo
-        )
-        invoice = MessageToDict(invoice)
-        payment_request = invoice['payment_request']
-        uri = ':'.join(['lightning', payment_request])
-        qrcode = QRcode.qrcode(uri, border=10)
-
-        await self.send_payreq(payment_request, qrcode)
+            await self.send_payreq(inbound_capacity_request.payment_request,
+                                   qrcode)

@@ -268,10 +268,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         const chainFormDataObject = {
             session_id: session_id,
             action: 'chain_fee',
-            form_data: formData,
-            selected_capacity: selectedCapacity,
-            selected_capacity_rate: selectedCapacityFeeRate,
-            selected_chain_fee: selectedTransactionFeeRate
+            form_data: formData
         };
         websocketSend(chainFormDataObject);
     }
