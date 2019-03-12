@@ -88,6 +88,11 @@ class MainServer(object):
                         )
                         continue
 
+                    if int(invoice_data['amt_paid_sat']) != inbound_capacity_request.total_fee:
+                        log.error('Payment does not match liability',
+                                  invoice_data=invoice_data,
+                                  total_fee=inbound_capacity_request.total_fee)
+                        continue
 
                     log.debug('emit invoice_data', invoice_data=invoice_data)
                     await self.sessions.handle_session_message(

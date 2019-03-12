@@ -3,17 +3,20 @@ from typing import Dict
 from websockets import WebSocketServerProtocol
 
 from lnd_grpc.lnd_grpc import Client
+from lnd_grpc.protos.rpc_pb2 import GetInfoResponse
 from website.logger import log
 from websocket.sessions.session import Session
 
 
 class SessionRegistry(object):
+    info: GetInfoResponse
     sessions: Dict[str, Session]
     rpc: Client
 
     def __init__(self, rpc):
         self.rpc = rpc
         self.peer_pubkeys = [p.pub_key for p in self.rpc.list_peers()]
+        self.info = self.rpc.get_info()
         self.sessions = {}
 
     async def handle_session_message(
@@ -65,6 +68,7 @@ class SessionRegistry(object):
         )
         self.sessions[session_id] = Session(
             session_id=session_id,
+            local_pubkey=self.info.identity_pubkey,
             ws=session_websocket,
             rpc=self.rpc,
             peer_pubkeys=self.peer_pubkeys

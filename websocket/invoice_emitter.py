@@ -5,6 +5,8 @@ from google.protobuf.json_format import MessageToDict
 import websockets
 
 from lnd_grpc import lnd_grpc
+from lnd_grpc.protos.rpc_pb2 import GetInfoResponse
+from lnd_sql.scripts.upsert_invoices import UpsertInvoices
 from website.logger import log
 from websocket.constants import MAIN_SERVER_WEBSOCKET_URL
 from websocket.utilities import get_server_id
@@ -26,6 +28,7 @@ class InvoiceEmitter(object):
             macaroon_path=macaroon_path,
             tls_cert_path=tls_cert_path
         )
+        self.info: GetInfoResponse = self.rpc.get_info()
 
         asyncio.get_event_loop().run_until_complete(
             self.send_to_server(MAIN_SERVER_WEBSOCKET_URL)
@@ -36,6 +39,10 @@ class InvoiceEmitter(object):
         async with websockets.connect(websocket_url) as websocket:
             invoice_subscription = self.rpc.subscribe_invoices(settle_index=1)
             for invoice in invoice_subscription:
+                UpsertInvoices.upsert(
+                    single_invoice=invoice,
+                    local_pubkey=self.info.identity_pubkey
+                )
                 invoice_data = MessageToDict(invoice)
                 invoice_data['r_hash'] = invoice.r_hash.hex()
                 invoice_data['r_preimage'] = invoice.r_preimage.hex()

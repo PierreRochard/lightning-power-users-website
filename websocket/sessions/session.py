@@ -12,6 +12,7 @@ from lnd_grpc.lnd_grpc import Client
 from lnd_sql import session_scope
 from lnd_sql.models.contrib.inbound_capacity_request import \
     InboundCapacityRequest
+from lnd_sql.scripts.upsert_invoices import UpsertInvoices
 from website.constants import EXPECTED_BYTES, CAPACITY_FEE_RATES
 from websocket.constants import PUBKEY_LENGTH
 from websocket.queries.channel_queries import ChannelQueries
@@ -27,10 +28,12 @@ class Session(object):
 
     def __init__(self,
                  session_id: str,
+                 local_pubkey: str,
                  ws: WebSocketServerProtocol,
                  rpc: Client,
                  peer_pubkeys: List[str]):
         self.session_id = session_id
+        self.local_pubkey = local_pubkey
         self.ws = ws
         self.rpc = rpc
         self.peer_pubkeys = peer_pubkeys
@@ -260,6 +263,11 @@ class Session(object):
                 value=int(inbound_capacity_request.total_fee),
                 memo=memo
             )
+            UpsertInvoices.upsert(
+                single_invoice=invoice,
+                local_pubkey=self.local_pubkey
+            )
+
             inbound_capacity_request.payment_request = invoice.payment_request
             inbound_capacity_request.invoice_r_hash = invoice.r_hash.hex()
             uri = ':'.join(['lightning',
