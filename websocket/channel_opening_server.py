@@ -10,6 +10,7 @@ import websockets
 from lnd_grpc import lnd_grpc
 from lnd_grpc.lnd_grpc import Client
 from website.logger import log
+from websocket.constants import MAIN_SERVER_WEBSOCKET_URL
 from websocket.utilities import get_server_id
 
 
@@ -37,7 +38,7 @@ class ChannelOpeningServer(object):
             )
             return
 
-        if data.get('server_id', None) != get_server_id('main'):
+        if data.get('server_id', None) != get_server_id('invoices'):
             log.error(
                 'Illegal access attempted',
                 data_string_from_client=data_string_from_client,
@@ -57,13 +58,16 @@ class ChannelOpeningServer(object):
         try:
             for update in open_channel_response:
                 update_data = MessageToDict(update)
-                msg = {
-                    'server_id': get_server_id('channels'),
-                    'session_id': data['session_id'],
-                    'open_channel_update': update_data
-                }
-                await websocket.send(json.dumps(msg))
                 if update_data.get('chan_pending', None):
+                    update_data['chan_pending']['txid'] = update.chan_pending.txid.hex()
+                    msg = {
+                        'server_id': get_server_id('channels'),
+                        'session_id': data['session_id'],
+                        'open_channel_update': update_data
+                    }
+                    async with websockets.connect(
+                            MAIN_SERVER_WEBSOCKET_URL) as m_ws:
+                        await m_ws.send(json.dumps(msg))
                     break
         except _Rendezvous as e:
             error_details = e.details()
@@ -73,7 +77,9 @@ class ChannelOpeningServer(object):
                 'error': error_details
             }
             log.error('Open channel error', error_message=error_message)
-            await websocket.send(error_message)
+            async with websockets.connect(
+                    MAIN_SERVER_WEBSOCKET_URL) as m_ws:
+                await m_ws.send(error_message)
 
 
 if __name__ == '__main__':
