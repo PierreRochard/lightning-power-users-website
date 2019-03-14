@@ -3,12 +3,18 @@ import json
 
 from google.protobuf.json_format import MessageToDict
 import websockets
+from sqlalchemy.orm.exc import NoResultFound
 
 from lnd_grpc import lnd_grpc
 from lnd_grpc.protos.rpc_pb2 import GetInfoResponse
+from lnd_sql import session_scope
+from lnd_sql.models import InboundCapacityRequest
 from lnd_sql.scripts.upsert_invoices import UpsertInvoices
 from website.logger import log
-from websocket.constants import MAIN_SERVER_WEBSOCKET_URL
+from websocket.constants import (
+    CHANNEL_OPENING_SERVER_WEBSOCKET_URL,
+    MAIN_SERVER_WEBSOCKET_URL
+)
 from websocket.utilities import get_server_id
 
 
@@ -37,22 +43,63 @@ class InvoiceEmitter(object):
 
     async def send_to_server(self):
         async with websockets.connect(MAIN_SERVER_WEBSOCKET_URL) as websocket:
-            invoice_subscription = self.rpc.subscribe_invoices(settle_index=1)
+            invoice_subscription = self.rpc.subscribe_invoices(
+                add_index=UpsertInvoices.get_max_add_index()
+            )
             for invoice in invoice_subscription:
+                # Invoices that are being added, not settled
+                if not invoice.settle_date:
+                    continue
+
                 UpsertInvoices.upsert(
                     single_invoice=invoice,
                     local_pubkey=self.info.identity_pubkey
                 )
+
                 invoice_data = MessageToDict(invoice)
                 invoice_data['r_hash'] = invoice.r_hash.hex()
                 invoice_data['r_preimage'] = invoice.r_preimage.hex()
-                data = {
-                    'server_id': get_server_id('invoices'),
-                    'invoice_data': invoice_data
-                }
-                data_string = json.dumps(data)
-                log.debug('sending websocket message', data=data)
-                await websocket.send(data_string)
+
+                with session_scope() as session:
+                    try:
+                        inbound_capacity_request: InboundCapacityRequest = (
+                            session.query(InboundCapacityRequest)
+                                .filter(InboundCapacityRequest.invoice_r_hash == invoice_data['r_hash'])
+                                .one()
+                        )
+                    except NoResultFound:
+                        log.debug(
+                            'r_hash not found in inbound_capacity_request table',
+                            invoice_data=invoice_data
+                        )
+                        continue
+
+                    if int(invoice_data['amt_paid_sat']) != inbound_capacity_request.total_fee:
+                        log.error('Payment does not match liability',
+                                  invoice_data=invoice_data,
+                                  total_fee=inbound_capacity_request.total_fee)
+                        continue
+
+                    data = {
+                        'server_id': get_server_id('invoices'),
+                        'invoice_data': invoice_data,
+                        'session_id': inbound_capacity_request.session_id
+                    }
+                    data_string = json.dumps(data)
+                    log.debug('sending websocket message', data=data)
+                    await websocket.send(data_string)
+
+                    data = dict(
+                        server_id=get_server_id('main'),
+                        session_id=inbound_capacity_request.session_id,
+                        type='open_channel',
+                        remote_pubkey=inbound_capacity_request.remote_pubkey,
+                        local_funding_amount=inbound_capacity_request.capacity,
+                        sat_per_byte=inbound_capacity_request.transaction_fee_rate
+                    )
+                    async with websockets.connect(
+                            CHANNEL_OPENING_SERVER_WEBSOCKET_URL) as co_ws:
+                        await co_ws.send(json.dumps(data))
 
 
 if __name__ == '__main__':

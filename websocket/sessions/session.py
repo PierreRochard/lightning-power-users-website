@@ -274,9 +274,10 @@ class Session(object):
             uri = ':'.join(['lightning',
                             inbound_capacity_request.payment_request])
             qrcode = QRcode.qrcode(uri, border=10)
+            payment_request = inbound_capacity_request.payment_request
 
-            await self.send_payreq(
-                payment_request=inbound_capacity_request.payment_request,
-                uri=uri,
-                qrcode=qrcode
-            )
+        await self.send_payreq(
+            payment_request=payment_request,
+            uri=uri,
+            qrcode=qrcode
+        )
