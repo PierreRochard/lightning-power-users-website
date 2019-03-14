@@ -259,10 +259,11 @@ class Session(object):
             else:
                 memo += f'reciprocate {inbound_capacity_request.capacity}'
 
-            invoice = self.rpc.add_invoice(
+            add_invoice_response = self.rpc.add_invoice(
                 value=int(inbound_capacity_request.total_fee),
                 memo=memo
             )
+            invoice = self.rpc.lookup_invoice(r_hash=add_invoice_response.r_hash)
             UpsertInvoices.upsert(
                 single_invoice=invoice,
                 local_pubkey=self.local_pubkey

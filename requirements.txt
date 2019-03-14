@@ -19,6 +19,7 @@ psycopg2
 python-bitcoinlib
 requests
 sqlalchemy
+sqlalchemy-postgres-copy
 structlog
 webassets
 websockets

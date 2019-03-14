@@ -2,11 +2,10 @@ import asyncio
 import json
 
 # noinspection PyPackageRequirements
-import websockets
-
 from google.protobuf.json_format import MessageToDict
 # noinspection PyProtectedMember
 from grpc._channel import _Rendezvous
+import websockets
 
 from lnd_grpc import lnd_grpc
 from lnd_grpc.lnd_grpc import Client

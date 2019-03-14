@@ -11,6 +11,7 @@ from lnd_sql import session_scope
 from lnd_sql.models import InboundCapacityRequest
 
 from website.logger import log
+from websocket.constants import CHANNEL_OPENING_SERVER_WEBSOCKET_URL
 from websocket.models.channel_opening_invoices import ChannelOpeningInvoices
 from websocket.sessions.session_registry import SessionRegistry
 from websocket.utilities import get_server_id
@@ -108,7 +109,9 @@ class MainServer(object):
                         local_funding_amount=inbound_capacity_request.capacity,
                         sat_per_byte=inbound_capacity_request.transaction_fee_rate
                     )
-                await self.channel_opening_server.send(json.dumps(data))
+                async with websockets.connect(
+                        CHANNEL_OPENING_SERVER_WEBSOCKET_URL) as co_ws:
+                    await co_ws.send(json.dumps(data))
 
             elif server_id == self.channel_server_id:
                 self.channel_opening_server = websocket
@@ -117,9 +120,9 @@ class MainServer(object):
                     'open_channel_update': data_from_client.get(
                         'open_channel_update', None)
                 }
-                await self.sessions.send(
+                await self.sessions.handle_session_message(
                     session_id=session_id,
-                    message=message
+                    data_from_client=message
                 )
             else:
                 log.error(

@@ -31,12 +31,12 @@ class InvoiceEmitter(object):
         self.info: GetInfoResponse = self.rpc.get_info()
 
         asyncio.get_event_loop().run_until_complete(
-            self.send_to_server(MAIN_SERVER_WEBSOCKET_URL)
+            self.send_to_server()
         )
         asyncio.get_event_loop().run_forever()
 
-    async def send_to_server(self, websocket_url: str):
-        async with websockets.connect(websocket_url) as websocket:
+    async def send_to_server(self):
+        async with websockets.connect(MAIN_SERVER_WEBSOCKET_URL) as websocket:
             invoice_subscription = self.rpc.subscribe_invoices(settle_index=1)
             for invoice in invoice_subscription:
                 UpsertInvoices.upsert(
