@@ -84,8 +84,7 @@ class InvoiceEmitter(object):
                     data = {
                         'server_id': get_server_id('invoices'),
                         'invoice_data': invoice_data,
-                        'session_id': inbound_capacity_request.session_id,
-                        'action': 'receive_payment'
+                        'session_id': inbound_capacity_request.session_id
                     }
                     log.debug('sending paid invoice', data=data)
                     data_string = json.dumps(data)
@@ -102,7 +101,8 @@ class InvoiceEmitter(object):
                         sat_per_byte=inbound_capacity_request.transaction_fee_rate
                     )
                     log.debug('sending channel open instructions', data=data)
-                    await co_ws.send(json.dumps(data))
+                    data_string = json.dumps(data)
+                    await co_ws.send(data_string)
 
 
 if __name__ == '__main__':

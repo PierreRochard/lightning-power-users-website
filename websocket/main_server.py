@@ -67,6 +67,7 @@ class MainServer(object):
                 continue
             elif server_id == self.invoice_server_id:
                 invoice_data = data_from_client['invoice_data']
+                invoice_data['action'] = 'receive_payment'
                 log.debug('emit invoice_data', invoice_data=invoice_data)
                 await self.sessions.handle_session_message(
                     session_id=data_from_client['session_id'],
