@@ -76,7 +76,8 @@ class MainServer(object):
                 message = {
                     'error': data_from_client.get('error', None),
                     'open_channel_update': data_from_client.get(
-                        'open_channel_update', None)
+                        'open_channel_update', None),
+                    'action': 'channel_open'
                 }
                 await self.sessions.handle_session_message(
                     session_id=session_id,

@@ -105,6 +105,7 @@ class Session(object):
         await self.send(message=message)
 
     async def send_payreq(self, payment_request, uri, qrcode):
+        self.log.debug('send_payreq')
         message = {
             'action': 'payment_request',
             'payment_request': payment_request,

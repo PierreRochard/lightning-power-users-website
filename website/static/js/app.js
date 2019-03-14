@@ -194,9 +194,12 @@ document.addEventListener('DOMContentLoaded', async function () {
                 paymentTab.classList.add('active');
                 $('#payment-tab-content').tab('show');
                 break;
-            case "payment_received":
+            case "receive_payment":
                 console.log(event.data);
                 paymentInfo.className += paymentInfo.className ? ' paid' : 'paid';
+                break;
+            case "channel_open":
+                console.log(event.data);
                 break;
             case "error_message":
                 console.log("error message");

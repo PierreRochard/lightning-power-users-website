@@ -79,28 +79,29 @@ class InvoiceEmitter(object):
                               total_fee=inbound_capacity_request.total_fee)
                     continue
 
-                data = {
-                    'server_id': get_server_id('invoices'),
-                    'invoice_data': invoice_data,
-                    'session_id': inbound_capacity_request.session_id
-                }
-                data_string = json.dumps(data)
-                log.debug('sending websocket message', data=data)
-
                 async with websockets.connect(
                         MAIN_SERVER_WEBSOCKET_URL) as m_ws:
+                    data = {
+                        'server_id': get_server_id('invoices'),
+                        'invoice_data': invoice_data,
+                        'session_id': inbound_capacity_request.session_id,
+                        'action': 'receive_payment'
+                    }
+                    log.debug('sending paid invoice', data=data)
+                    data_string = json.dumps(data)
                     await m_ws.send(data_string)
 
-                data = dict(
-                    server_id=get_server_id('invoices'),
-                    session_id=inbound_capacity_request.session_id,
-                    type='open_channel',
-                    remote_pubkey=inbound_capacity_request.remote_pubkey,
-                    local_funding_amount=inbound_capacity_request.capacity,
-                    sat_per_byte=inbound_capacity_request.transaction_fee_rate
-                )
                 async with websockets.connect(
                         CHANNEL_OPENING_SERVER_WEBSOCKET_URL) as co_ws:
+                    data = dict(
+                        server_id=get_server_id('invoices'),
+                        session_id=inbound_capacity_request.session_id,
+                        type='open_channel',
+                        remote_pubkey=inbound_capacity_request.remote_pubkey,
+                        local_funding_amount=inbound_capacity_request.capacity,
+                        sat_per_byte=inbound_capacity_request.transaction_fee_rate
+                    )
+                    log.debug('sending channel open instructions', data=data)
                     await co_ws.send(json.dumps(data))
 
 

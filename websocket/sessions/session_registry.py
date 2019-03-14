@@ -53,6 +53,10 @@ class SessionRegistry(object):
         elif action == 'chain_fee':
             form_data = data_from_client.get('form_data', None)
             await self.sessions[session_id].chain_fee(form_data)
+        elif action == 'receive_payment':
+            await self.sessions[session_id].send(data_from_client)
+        elif action == 'channel_open':
+            await self.sessions[session_id].send(data_from_client)
         else:
             log.debug(
                 'Unknown action',
