@@ -15,7 +15,6 @@ class SessionRegistry(object):
 
     def __init__(self, rpc):
         self.rpc = rpc
-        self.peer_pubkeys = [p.pub_key for p in self.rpc.list_peers()]
         self.info = self.rpc.get_info()
         self.sessions = {}
 
@@ -75,7 +74,6 @@ class SessionRegistry(object):
             local_pubkey=self.info.identity_pubkey,
             ws=session_websocket,
             rpc=self.rpc,
-            peer_pubkeys=self.peer_pubkeys
         )
         await self.sessions[session_id].send_registered()
 

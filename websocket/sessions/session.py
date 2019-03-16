@@ -1,15 +1,16 @@
 import json
 from decimal import Decimal
-from typing import List
 
 from flask_qrcode import QRcode
 # noinspection PyProtectedMember
 from grpc._channel import _Rendezvous
+from sqlalchemy.orm.exc import NoResultFound
 from structlog import get_logger
 from websockets import WebSocketServerProtocol
 
 from lnd_grpc.lnd_grpc import Client
 from lnd_sql import session_scope
+from lnd_sql.models import Peers
 from lnd_sql.models.contrib.inbound_capacity_request import \
     InboundCapacityRequest
 from lnd_sql.scripts.upsert_invoices import UpsertInvoices
@@ -30,13 +31,11 @@ class Session(object):
                  session_id: str,
                  local_pubkey: str,
                  ws: WebSocketServerProtocol,
-                 rpc: Client,
-                 peer_pubkeys: List[str]):
+                 rpc: Client):
         self.session_id = session_id
         self.local_pubkey = local_pubkey
         self.ws = ws
         self.rpc = rpc
-        self.peer_pubkeys = peer_pubkeys
 
         self.remote_host = None
         self.remote_pubkey = None
@@ -115,6 +114,7 @@ class Session(object):
         await self.send(message=message)
 
     async def connect_to_peer(self, remote_pubkey_input: str):
+        self.log.debug('connect_to_peer', remote_pubkey_input=remote_pubkey_input)
         self.remote_pubkey = remote_pubkey_input.strip()
         if not self.remote_pubkey:
             self.log.debug(
@@ -158,14 +158,19 @@ class Session(object):
         # Connect to peer
         if self.remote_host is None:
             try:
-                assert [p for p in self.peer_pubkeys if p == self.remote_pubkey][0]
+                with session_scope() as session:
+                    peer = (
+                        session.query(Peers).filter(
+                            Peers.remote_pubkey == self.remote_pubkey)
+                        .one()
+                    )
                 self.log.debug(
                     'Already connected to peer',
                     remote_pubkey=self.remote_pubkey
                 )
                 await self.send_connected()
                 return
-            except IndexError:
+            except NoResultFound:
                 self.log.debug(
                     'Unknown PubKey, please provide pubkey@host:port',
                     pubkey=self.remote_pubkey,
