@@ -96,7 +96,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     const connectForm = document.getElementById('connect_form');
     const connectButton = document.getElementById('connect_button');
     const connectTextarea = document.getElementById('connect_textarea');
-    const progressBar = document.getElementById('progress_bar');
+    const progressBar = document.getElementById('progress-bar');
+    const progressBarDiv = document.getElementById('progress-bar-div');
 
     const errorMessage = document.getElementById('error_message');
 
@@ -124,6 +125,21 @@ document.addEventListener('DOMContentLoaded', async function () {
         console.log(data_string);
     }
 
+    function showProgressBar(content) {
+        progressBar.style.width = "100%";
+        progressBar.textContent = content;
+        progressBarDiv.style.visibility = "visible";
+    }
+
+    function hideProgressBar() {
+        progressBarDiv.style.visibility = "hidden";
+    }
+
+    function hideErrorMessage() {
+        errorMessage.textContent = "";
+        errorMessage.style.visibility = "hidden";
+    }
+
     session_websocket.onopen = function (event) {
         const session_id_object = {
             session_id: session_id,
@@ -134,11 +150,18 @@ document.addEventListener('DOMContentLoaded', async function () {
     };
 
     session_websocket.onmessage = function (event) {
-        console.log(event.data);
         const msg = JSON.parse(event.data);
         switch(msg.action) {
             case "registered":
                 console.log("registered");
+                document.onkeydown = null;
+                document.onkeydown = function(event) {
+                    if (event.which === 13 || event.which === 9) {
+                        connectForm.dispatchEvent(new Event("submit", {cancelable: true}));
+                        event.preventDefault();
+                    }
+                };
+                connectTextarea.focus();
                 break;
             case "connected":
                 console.log("connected");
@@ -152,8 +175,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                     capacitySelect.options[0].value = reciprocateAmount;
                     capacitySelect.options[0].textContent = 'Reciprocate ' + reciprocateAmountString;
                 }
-                progressBar.style.width = "0%";
-                progressBar.textContent = "";
+                hideProgressBar();
                 connectTabContent.classList.remove('show');
                 connectTabContent.classList.remove('active');
                 connectTab.classList.remove('active');
@@ -161,11 +183,17 @@ document.addEventListener('DOMContentLoaded', async function () {
                 capacityTab.classList.remove('disabled');
                 capacityTab.classList.add('active');
                 $('#capacity-tab-content').tab('show');
+                document.onkeydown = null;
+                document.onkeydown = function(event) {
+                    if (event.which === 13 || event.which === 9) {
+                        capacityForm.dispatchEvent(new Event("submit", {cancelable: true}));
+                        event.preventDefault();
+                    }
+                };
                 break;
             case "confirmed_capacity":
                 console.log("capacity_confirmed");
-                progressBar.style.width = "0%";
-                progressBar.textContent = "";
+                hideProgressBar();
                 capacityTabContent.classList.remove('show');
                 capacityTabContent.classList.remove('active');
                 capacityTab.classList.remove('active');
@@ -173,11 +201,17 @@ document.addEventListener('DOMContentLoaded', async function () {
                 chainTab.classList.remove('disabled');
                 chainTab.classList.add('active');
                 $('#chain-tab-content').tab('show');
+                document.onkeydown = null;
+                document.onkeydown = function(event) {
+                    if (event.which === 13 || event.which === 9) {
+                        chainForm.dispatchEvent(new Event("submit", {cancelable: true}));
+                        event.preventDefault();
+                    }
+                };
                 break;
             case "payment_request":
                 console.log("confirmed_chain_fee");
-                progressBar.style.width = "0%";
-                progressBar.textContent = "";
+                hideProgressBar();
 
                 const image = document.getElementById("qrcode");
                 image.src = msg.qrcode;
@@ -193,18 +227,28 @@ document.addEventListener('DOMContentLoaded', async function () {
                 paymentTab.classList.remove('disabled');
                 paymentTab.classList.add('active');
                 $('#payment-tab-content').tab('show');
+                document.onkeydown = null;
+                document.onkeydown = function(event) {
+                    if (event.which === 13 || event.which === 9) {
+                        payWithJoule.click();
+                        event.preventDefault();
+                    }
+                };
                 break;
             case "receive_payment":
                 console.log(event.data);
+                document.onkeydown = null;
                 paymentInfo.className += paymentInfo.className ? ' paid' : 'paid';
+                showProgressBar("Opening channel...");
                 break;
             case "channel_open":
                 console.log(event.data);
+                hideProgressBar();
                 break;
             case "error_message":
                 console.log("error message");
-                progressBar.style.width = "0%";
-                progressBar.textContent = "";
+                document.onkeydown = null;
+                hideProgressBar();
                 errorMessage.style.visibility = "visible";
                 errorMessage.textContent = msg.error;
                 connectButton.disabled = false;
@@ -215,14 +259,12 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     function connectFormSubmit(event) {
         event.preventDefault();
-        progressBar.style.width = "50%";
-        progressBar.textContent = "Connecting...";
+        showProgressBar("Connecting...");
         const formData = JSON.parse(JSON.stringify(jQuery('#connect_form').serializeArray()));
         connectButton.disabled = true;
         connectTextarea.disabled = true;
 
-        errorMessage.textContent = "";
-        errorMessage.style.visibility = "hidden";
+        hideErrorMessage();
 
         const connectFormDataObject = {
             session_id: session_id,
@@ -233,19 +275,16 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
     connectForm.onsubmit = connectFormSubmit;
 
-
     const capacityForm = document.getElementById('capacity_form');
     const capacityButton = document.getElementById('capacity_button');
 
     function capacityFormSubmit(event) {
         event.preventDefault();
-        progressBar.style.width = "50%";
-        progressBar.textContent = "Confirming capacity...";
+        showProgressBar("Confirming capacity...");
         const formData = JSON.parse(JSON.stringify(jQuery('#capacity_form').serializeArray()));
         capacityButton.disabled = true;
 
-        errorMessage.textContent = "";
-        errorMessage.style.visibility = "hidden";
+        hideErrorMessage();
 
         const capacityFormDataObject = {
             session_id: session_id,
@@ -262,13 +301,11 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     function chainFormSubmit(event) {
         event.preventDefault();
-        progressBar.style.width = "50%";
-        progressBar.textContent = "Confirming chain fee...";
+        showProgressBar("Confirming chain fee...");
         const formData = JSON.parse(JSON.stringify(jQuery('#chain_form').serializeArray()));
         chainButton.disabled = true;
 
-        errorMessage.textContent = "";
-        errorMessage.style.visibility = "hidden";
+        hideErrorMessage();
 
         const chainFormDataObject = {
             session_id: session_id,
