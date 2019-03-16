@@ -177,7 +177,8 @@ class Session(object):
                 return
 
         try:
-            self.rpc.connect('@'.join([self.remote_pubkey, self.remote_host]))
+            address = '@'.join([self.remote_pubkey, self.remote_host])
+            self.rpc.connect(address=address, timeout=3)
             self.log.debug(
                 'Connected to peer',
                 remote_pubkey=self.remote_pubkey
@@ -282,3 +283,21 @@ class Session(object):
             uri=uri,
             qrcode=qrcode
         )
+
+    async def receive_payment(self):
+        message = {
+            'action': 'receive_payment'
+        }
+        await self.send(message=message)
+
+    async def channel_open(self, data: dict):
+        if data.get('error', None):
+            await self.send_error_message(data['error'])
+            return
+        txid = data['open_channel_update']['chan_pending']['txid']
+        message = {
+            'action': 'channel_open',
+            'url': f'https://blockstream.info/tx/{txid}',
+            'txid': txid
+        }
+        await self.send(message=message)

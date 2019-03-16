@@ -48,6 +48,7 @@ class ChannelOpeningServer(object):
 
         log.debug('Opening channel', data=data)
         open_channel_response = self.rpc.open_channel(
+            timeout=4,
             node_pubkey_string=data['remote_pubkey'],
             local_funding_amount=int(data['local_funding_amount']),
             push_sat=0,
@@ -79,7 +80,7 @@ class ChannelOpeningServer(object):
             log.error('Open channel error', error_message=error_message)
             async with websockets.connect(
                     MAIN_SERVER_WEBSOCKET_URL) as m_ws:
-                await m_ws.send(error_message)
+                await m_ws.send(json.dumps(error_message))
 
 
 if __name__ == '__main__':
