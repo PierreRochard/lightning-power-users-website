@@ -25,7 +25,10 @@ def get_latest(name, date_time=None):
         if name == 'usd_price':
             cache_usd_price()
         elif name == 'fee_estimate':
-            cache_fee_estimate()
+            try:
+                cache_fee_estimate()
+            except:
+                log.error('cache_fee_estimate failed', exc_info=True)
         else:
             log.error('Cache not implemented', name=name)
         latest = date_time.hour
