@@ -10,7 +10,7 @@ from websockets import WebSocketServerProtocol
 
 from lnd_grpc.lnd_grpc import Client
 from lnd_sql import session_scope
-from lnd_sql.models import Peers
+from lnd_sql.models import ActivePeers
 from lnd_sql.models.contrib.inbound_capacity_request import \
     InboundCapacityRequest
 from lnd_sql.scripts.upsert_invoices import UpsertInvoices
@@ -160,8 +160,8 @@ class Session(object):
             try:
                 with session_scope() as session:
                     peer = (
-                        session.query(Peers).filter(
-                            Peers.remote_pubkey == self.remote_pubkey)
+                        session.query(ActivePeers).filter(
+                            ActivePeers.remote_pubkey == self.remote_pubkey)
                         .one()
                     )
                 self.log.debug(

@@ -1,23 +1,26 @@
 import uuid
 
-import structlog
 from bitcoin.core import COIN
 from flask import render_template, session
 from flask_admin import BaseView, expose
 
+from lnd_sql import session_scope
+from lnd_sql.models import ExchangeRates
 from website.constants import EXPECTED_BYTES
 from website.forms.request_capacity_form import get_request_capacity_form
-from website.utilities.cache.cache import get_latest
 from websocket.constants import MAIN_SERVER_WEBSOCKET_URL
 
 
 class HomeView(BaseView):
     @expose('/')
     def index(self):
-        logger = structlog.get_logger()
-        log = logger.new(request_id=str(uuid.uuid4()))
-        price = get_latest('usd_price')
-        last_price = price['last']
+        with session_scope() as db_session:
+            last_price = (
+                db_session.query(ExchangeRates.last)
+                .order_by(ExchangeRates.timestamp.desc())
+                .limit(1)
+                .scalar()
+            )
         price_per_sat = last_price / COIN
         form = get_request_capacity_form()
 

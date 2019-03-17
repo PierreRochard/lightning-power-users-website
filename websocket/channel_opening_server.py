@@ -61,7 +61,7 @@ class ChannelOpeningServer(object):
             for update in open_channel_response:
                 update_data = MessageToDict(update)
                 if update_data.get('chan_pending', None):
-                    hex_txid = update.chan_pending.txid.hex()
+                    hex_txid = codecs.encode(update.chan_pending.txid, 'hex')
                     str_txid = codecs.decode(hex_txid, 'utf-8')
                     update_data['chan_pending']['txid'] = str_txid
                     msg = {
