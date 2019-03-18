@@ -52,5 +52,5 @@ def get_request_capacity_form() -> RequestCapacityForm:
     for capacity_choice in CAPACITY_CHOICES:
         form.capacity.choices.append((capacity_choice, f'{capacity_choice:,}'))
 
-    form.capacity_fee_rate.choices = CAPACITY_FEE_RATES
+    form.capacity_fee_rate.choices = [(c[0], c[1]) for c in CAPACITY_FEE_RATES]
     return form

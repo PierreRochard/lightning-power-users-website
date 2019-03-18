@@ -49,6 +49,11 @@ class InvoiceServer(object):
 
         capacity_request = InboundCapacityRequestQueries.get_by_invoice(r_hash)
 
+        if capacity_request is None:
+            log.info('Invoice not related to capacity request',
+                     invoice_data=invoice_data)
+            return
+
         if int(invoice_data['amt_paid_sat']) != capacity_request['total_fee']:
             log.error('Payment does not match liability',
                       invoice_data=invoice_data,
