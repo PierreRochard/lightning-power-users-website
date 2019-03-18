@@ -7,8 +7,16 @@ from website.logger import log
 
 class InboundCapacityRequestQueries(object):
     @staticmethod
-    def get_by_invoice(r_hash: str) -> dict:
+    def insert(session_id: str, remote_pubkey: str, remote_host: str):
+        with session_scope() as session:
+            new_request = InboundCapacityRequest()
+            new_request.session_id = session_id
+            new_request.remote_pubkey = remote_pubkey
+            new_request.remote_host = remote_host
+            session.add(new_request)
 
+    @staticmethod
+    def get_by_invoice(r_hash: str) -> dict:
         with session_scope() as session:
             try:
                 record = (

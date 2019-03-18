@@ -16,6 +16,7 @@ from lnd_sql.models.contrib.inbound_capacity_request import \
 from lnd_sql.scripts.upsert_invoices import UpsertInvoices
 from website.constants import EXPECTED_BYTES, CAPACITY_FEE_RATES
 from websocket.constants import PUBKEY_LENGTH
+from websocket.queries import InboundCapacityRequestQueries
 from websocket.queries.channel_queries import ChannelQueries
 
 
@@ -77,12 +78,11 @@ class Session(object):
 
             self.reciprocate_capacity = int(data['capacity'])
 
-        with session_scope() as session:
-            new_request = InboundCapacityRequest()
-            new_request.session_id = self.session_id
-            new_request.remote_pubkey = self.remote_pubkey
-            new_request.remote_host = self.remote_host
-            session.add(new_request)
+        InboundCapacityRequestQueries.insert(
+            session_id=self.session_id,
+            remote_pubkey=self.remote_pubkey,
+            remote_host=self.remote_host
+        )
 
         message = {
             'action': 'connected',
@@ -113,8 +113,7 @@ class Session(object):
         }
         await self.send(message=message)
 
-    async def connect_to_peer(self, remote_pubkey_input: str):
-        self.log.debug('connect_to_peer', remote_pubkey_input=remote_pubkey_input)
+    async def parse_remote_pubkey(self, remote_pubkey_input: str):
         self.remote_pubkey = remote_pubkey_input.strip()
         if not self.remote_pubkey:
             self.log.debug(
@@ -124,6 +123,7 @@ class Session(object):
             await self.send_error_message(
                 'Please enter your PubKey'
             )
+            self.remote_pubkey = None
             return
 
         if '@' in self.remote_pubkey:
@@ -144,6 +144,7 @@ class Session(object):
                 await self.send_error_message(
                     error='Invalid PubKey format'
                 )
+                self.remote_pubkey = None
                 return
         else:
             self.remote_host = None
@@ -153,6 +154,16 @@ class Session(object):
             await self.send_error_message(
                 f'Invalid PubKey length, expected {PUBKEY_LENGTH} characters'
             )
+            self.remote_pubkey = None
+            return
+
+    async def connect_to_peer(self, remote_pubkey_input: str):
+        self.log.debug(
+            'connect_to_peer',
+            remote_pubkey_input=remote_pubkey_input
+        )
+        await self.parse_remote_pubkey(remote_pubkey_input)
+        if not self.remote_pubkey:
             return
 
         # Connect to peer
