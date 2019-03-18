@@ -126,36 +126,39 @@ class Session(object):
             self.remote_pubkey = None
             return
 
-        if '@' in self.remote_pubkey:
-            # noinspection PyBroadException
-            try:
-                self.remote_pubkey, self.remote_host = self.remote_pubkey.split('@')
-                self.log.debug(
-                    'Parsed host',
-                    remote_pubkey=self.remote_pubkey,
-                    remote_host=self.remote_host
-                )
-            except:
-                self.log.error(
-                    'Invalid PubKey format',
-                    remote_pubkey=self.remote_pubkey,
-                    exc_info=True
-                )
-                await self.send_error_message(
-                    error='Invalid PubKey format'
-                )
-                self.remote_pubkey = None
-                return
+        parts = self.remote_pubkey.split('@')
+        if len(parts) > 2:
+            self.log.error(
+                'Invalid PubKey format',
+                remote_pubkey=self.remote_pubkey,
+                exc_info=True
+            )
+            await self.send_error_message(
+                error='Invalid PubKey format'
+            )
+            self.remote_pubkey = None
+            return
+        elif len(parts) == 2:
+            self.remote_pubkey, self.remote_host = parts
         else:
             self.remote_host = None
 
         if len(self.remote_pubkey) != PUBKEY_LENGTH:
-            self.log.error('Invalid PubKey length', pubkey=self.remote_pubkey)
+            self.log.error(
+                'Invalid PubKey length',
+                pubkey=self.remote_pubkey
+            )
             await self.send_error_message(
                 f'Invalid PubKey length, expected {PUBKEY_LENGTH} characters'
             )
             self.remote_pubkey = None
             return
+
+        self.log.debug(
+            'Parsed host',
+            remote_pubkey=self.remote_pubkey,
+            remote_host=self.remote_host
+        )
 
     async def connect_to_peer(self, remote_pubkey_input: str):
         self.log.debug(
