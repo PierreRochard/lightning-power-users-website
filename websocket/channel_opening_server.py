@@ -1,5 +1,5 @@
 import asyncio
-import codecs
+import binascii
 import json
 
 # noinspection PyPackageRequirements
@@ -62,9 +62,9 @@ class ChannelOpeningServer(object):
                 update_data = MessageToDict(update)
                 if not update_data.get('chan_pending', None):
                     continue
-                hex_txid = codecs.encode(update.chan_pending.txid, 'hex')
-                str_txid = codecs.decode(hex_txid, 'utf-8')
-                update_data['chan_pending']['txid'] = str_txid
+                txid_bytes = update.chan_pending.txid
+                txid_str = binascii.hexlify(txid_bytes[::-1]).decode('utf8')
+                update_data['chan_pending']['txid'] = txid_str
                 msg = {
                     'server_id': get_server_id('channels'),
                     'session_id': data['session_id'],
