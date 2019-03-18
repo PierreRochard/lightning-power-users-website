@@ -3,18 +3,15 @@ import json
 
 from google.protobuf.json_format import MessageToDict
 import websockets
-from sqlalchemy.orm.exc import NoResultFound
 
 from lnd_grpc import lnd_grpc
-from lnd_grpc.protos.rpc_pb2 import GetInfoResponse
-from lnd_sql import session_scope
-from lnd_sql.models import InboundCapacityRequest
 from lnd_sql.scripts.upsert_invoices import UpsertInvoices
 from website.logger import log
 from websocket.constants import (
     CHANNEL_OPENING_SERVER_WEBSOCKET_URL,
     MAIN_SERVER_WEBSOCKET_URL
 )
+from websocket.queries import InboundCapacityRequestQueries
 from websocket.utilities import get_server_id
 
 
@@ -34,75 +31,65 @@ class InvoiceServer(object):
             macaroon_path=macaroon_path,
             tls_cert_path=tls_cert_path
         )
-        self.info: GetInfoResponse = self.rpc.get_info()
 
-        asyncio.get_event_loop().run_until_complete(
-            self.send_to_server()
+    @staticmethod
+    async def handle_invoice(local_pubkey, invoice):
+        # Invoices that are being added, not settled
+        if not invoice.settle_date:
+            return
+
+        UpsertInvoices.upsert(
+            single_invoice=invoice,
+            local_pubkey=local_pubkey
         )
-        asyncio.get_event_loop().run_forever()
 
-    async def send_to_server(self):
+        invoice_data = MessageToDict(invoice)
+        invoice_data['r_hash'] = r_hash = invoice.r_hash.hex()
+        invoice_data['r_preimage'] = invoice.r_preimage.hex()
+
+        capacity_request = InboundCapacityRequestQueries.get_by_invoice(r_hash)
+
+        if int(invoice_data['amt_paid_sat']) != capacity_request['total_fee']:
+            log.error('Payment does not match liability',
+                      invoice_data=invoice_data,
+                      total_fee=capacity_request['total_fee'])
+            return
+
+        client_invoice_data = {
+            'server_id': get_server_id('invoices'),
+            'invoice_data': invoice_data,
+            'session_id': capacity_request['session_id']
+        }
+        log.debug('sending paid invoice',
+                  client_invoice_data=client_invoice_data)
+        client_invoice_data_string = json.dumps(client_invoice_data)
+
+        async with websockets.connect(MAIN_SERVER_WEBSOCKET_URL) as m_ws:
+            await m_ws.send(client_invoice_data_string)
+
+        chan_open_data = dict(
+            server_id=get_server_id('invoices'),
+            session_id=capacity_request['session_id'],
+            type='open_channel',
+            remote_pubkey=capacity_request['remote_pubkey'],
+            local_funding_amount=capacity_request['capacity'],
+            sat_per_byte=capacity_request['transaction_fee_rate']
+        )
+        log.debug('sending channel open instructions',
+                  chan_open_data=chan_open_data)
+        chan_open_data_string = json.dumps(chan_open_data)
+
+        async with websockets.connect(
+                CHANNEL_OPENING_SERVER_WEBSOCKET_URL) as co_ws:
+            await co_ws.send(chan_open_data_string)
+
+    async def run(self):
+        local_pubkey = self.rpc.get_info().identity_pubkey
         invoice_subscription = self.rpc.subscribe_invoices(
             add_index=UpsertInvoices.get_max_add_index()
         )
         for invoice in invoice_subscription:
-            # Invoices that are being added, not settled
-            if not invoice.settle_date:
-                continue
-
-            UpsertInvoices.upsert(
-                single_invoice=invoice,
-                local_pubkey=self.info.identity_pubkey
-            )
-
-            invoice_data = MessageToDict(invoice)
-            invoice_data['r_hash'] = invoice.r_hash.hex()
-            invoice_data['r_preimage'] = invoice.r_preimage.hex()
-
-            with session_scope() as session:
-                try:
-                    inbound_capacity_request: InboundCapacityRequest = (
-                        session.query(InboundCapacityRequest)
-                            .filter(InboundCapacityRequest.invoice_r_hash == invoice_data['r_hash'])
-                            .one()
-                    )
-                except NoResultFound:
-                    log.debug(
-                        'r_hash not found in inbound_capacity_request table',
-                        invoice_data=invoice_data
-                    )
-                    continue
-
-                if int(invoice_data['amt_paid_sat']) != inbound_capacity_request.total_fee:
-                    log.error('Payment does not match liability',
-                              invoice_data=invoice_data,
-                              total_fee=inbound_capacity_request.total_fee)
-                    continue
-
-                async with websockets.connect(
-                        MAIN_SERVER_WEBSOCKET_URL) as m_ws:
-                    data = {
-                        'server_id': get_server_id('invoices'),
-                        'invoice_data': invoice_data,
-                        'session_id': inbound_capacity_request.session_id
-                    }
-                    log.debug('sending paid invoice', data=data)
-                    data_string = json.dumps(data)
-                    await m_ws.send(data_string)
-
-                async with websockets.connect(
-                        CHANNEL_OPENING_SERVER_WEBSOCKET_URL) as co_ws:
-                    data = dict(
-                        server_id=get_server_id('invoices'),
-                        session_id=inbound_capacity_request.session_id,
-                        type='open_channel',
-                        remote_pubkey=inbound_capacity_request.remote_pubkey,
-                        local_funding_amount=inbound_capacity_request.capacity,
-                        sat_per_byte=inbound_capacity_request.transaction_fee_rate
-                    )
-                    log.debug('sending channel open instructions', data=data)
-                    data_string = json.dumps(data)
-                    await co_ws.send(data_string)
+            await self.handle_invoice(local_pubkey, invoice)
 
 
 if __name__ == '__main__':
@@ -128,7 +115,12 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    InvoiceServer(
+    invoice_server = InvoiceServer(
         macaroon_path=args.macaroon,
         tls_cert_path=args.tls
     )
+
+    asyncio.get_event_loop().run_until_complete(
+        invoice_server.run()
+    )
+    asyncio.get_event_loop().run_forever()
