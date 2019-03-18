@@ -209,7 +209,7 @@ class Session(object):
                     exc_info=True
                 )
                 await self.send_error_message(
-                    f'Error: {details}'
+                    f'Error: {details}, please connect to our node 0331f80652fb840239df8dc99205792bba2e559a05469915804c08420230e23c7c@lightningpowerusers.com:9735'
                 )
                 return
 
