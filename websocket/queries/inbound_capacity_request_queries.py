@@ -1,7 +1,12 @@
+from datetime import datetime
+from decimal import Decimal
+
+import pytz
 from sqlalchemy.orm.exc import NoResultFound
 
 from lnd_sql import session_scope
 from lnd_sql.models import InboundCapacityRequest
+from website.constants import CAPACITY_FEE_RATES
 from website.logger import log
 
 
@@ -14,6 +19,23 @@ class InboundCapacityRequestQueries(object):
             new_request.remote_pubkey = remote_pubkey
             new_request.remote_host = remote_host
             session.add(new_request)
+
+    @staticmethod
+    def update_capacity(session_id: str, capacity: int,
+                        capacity_fee_rate: Decimal):
+        with session_scope() as session:
+            request: InboundCapacityRequest = (
+                session.query(InboundCapacityRequest)
+                    .filter(InboundCapacityRequest.session_id == session_id)
+                    .order_by(InboundCapacityRequest.updated_at.desc())
+                    .first()
+            )
+            request.capacity = capacity
+            request.capacity_fee_rate = capacity_fee_rate
+            request.capacity_fee = request.capacity * request.capacity_fee_rate
+            delta = [c[2] for c in CAPACITY_FEE_RATES if c[0] == capacity_fee_rate][0]
+            today = datetime.utcnow().replace(tzinfo=pytz.utc)
+            request.keep_open_until = today + delta
 
     @staticmethod
     def get_by_invoice(r_hash: str) -> dict:

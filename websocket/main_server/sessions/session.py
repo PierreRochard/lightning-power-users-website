@@ -215,23 +215,27 @@ class Session(object):
             session_id=self.session_id,
             form_data=form_data
         )
-        with session_scope() as session:
-            request: InboundCapacityRequest = (
-                session.query(InboundCapacityRequest)
-                .filter(InboundCapacityRequest.session_id == self.session_id)
-                .order_by(InboundCapacityRequest.updated_at.desc())
-                .first()
+        capacity = int([f['value'] for f in form_data
+                        if f['name'] == 'capacity'][0])
+        try:
+            capacity_fee_rate = Decimal(
+                [f['value'] for f in form_data
+                 if f['name'] == 'capacity_fee_rate'][0]
             )
-            request.capacity = int([f['value'] for f in form_data
-                                    if f['name'] == 'capacity'][0])
-            try:
-                request.capacity_fee_rate = Decimal([f['value'] for f in form_data
-                                                     if f['name'] == 'capacity_fee_rate'][0])
-                assert request.capacity_fee_rate in [c[0] for c in CAPACITY_FEE_RATES]
-            except IndexError:
-                request.capacity_fee_rate = 0
-                assert request.capacity == self.reciprocate_capacity
-            request.capacity_fee = request.capacity * request.capacity_fee_rate
+            if capacity_fee_rate not in [c[0] for c in CAPACITY_FEE_RATES]:
+                await self.send_error_message('Invalid capacity fee rate')
+                return
+        except IndexError:
+            capacity_fee_rate = 0
+            if capacity != self.reciprocate_capacity:
+                await self.send_error_message('Invalid capacity')
+                return
+
+        InboundCapacityRequestQueries.update_capacity(
+            session_id=self.session_id,
+            capacity=capacity,
+            capacity_fee_rate=capacity_fee_rate
+        )
         await self.send_confirmed_capacity()
 
     async def chain_fee(self, form_data):

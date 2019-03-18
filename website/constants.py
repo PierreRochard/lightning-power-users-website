@@ -1,5 +1,6 @@
 import os
 import platform
+from datetime import timedelta
 from decimal import Decimal
 from os.path import expanduser
 from typing import Dict
@@ -65,10 +66,10 @@ EXPECTED_BYTES = 500
 CAPACITY_CHOICES = [500000, 1000000, 2000000, 5000000, 16777215]
 
 CAPACITY_FEE_RATES = [
-    (Decimal('0'), 'Three days free'),
-    (Decimal('0.005'), 'Three days 0.5%'),
-    (Decimal('0.01'), 'Two weeks 1%'),
-    (Decimal('0.03'), 'One month 3%')
+    (Decimal('0'), 'Three days free', timedelta(days=3)),
+    (Decimal('0.005'), 'Three days 0.5%', timedelta(days=3)),
+    (Decimal('0.01'), 'Two weeks 1%', timedelta(weeks=2)),
+    (Decimal('0.03'), 'One month 3%', timedelta(days=31))
 ]
 
 if IS_WINDOWS:
