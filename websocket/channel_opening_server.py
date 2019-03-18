@@ -60,19 +60,20 @@ class ChannelOpeningServer(object):
         try:
             for update in open_channel_response:
                 update_data = MessageToDict(update)
-                if update_data.get('chan_pending', None):
-                    hex_txid = codecs.encode(update.chan_pending.txid, 'hex')
-                    str_txid = codecs.decode(hex_txid, 'utf-8')
-                    update_data['chan_pending']['txid'] = str_txid
-                    msg = {
-                        'server_id': get_server_id('channels'),
-                        'session_id': data['session_id'],
-                        'open_channel_update': update_data
-                    }
-                    async with websockets.connect(
-                            MAIN_SERVER_WEBSOCKET_URL) as m_ws:
-                        await m_ws.send(json.dumps(msg))
-                    break
+                if not update_data.get('chan_pending', None):
+                    continue
+                hex_txid = codecs.encode(update.chan_pending.txid, 'hex')
+                str_txid = codecs.decode(hex_txid, 'utf-8')
+                update_data['chan_pending']['txid'] = str_txid
+                msg = {
+                    'server_id': get_server_id('channels'),
+                    'session_id': data['session_id'],
+                    'open_channel_update': update_data
+                }
+                async with websockets.connect(
+                        MAIN_SERVER_WEBSOCKET_URL) as m_ws:
+                    await m_ws.send(json.dumps(msg))
+                break
         except _Rendezvous as e:
             error_details = e.details()
             error_message = {
@@ -96,13 +97,15 @@ if __name__ == '__main__':
     parser.add_argument(
         '--macaroon',
         '-m',
-        type=str
+        type=str,
+        default=None
     )
 
     parser.add_argument(
         '--tls',
         '-t',
-        type=str
+        type=str,
+        default=None
     )
 
     parser.add_argument(

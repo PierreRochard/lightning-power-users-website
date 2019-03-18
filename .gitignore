@@ -128,3 +128,5 @@ pip-selfcheck.json
 /website/static/gen/
 !/database/scripts/
 /remote/
+/website/supervisord.conf
+/websocket/supervisord.conf

@@ -5,7 +5,7 @@ from websockets import WebSocketServerProtocol
 from lnd_grpc.lnd_grpc import Client
 from lnd_grpc.protos.rpc_pb2 import GetInfoResponse
 from website.logger import log
-from websocket.sessions.session import Session
+from websocket.main_server.sessions.session import Session
 
 
 class SessionRegistry(object):

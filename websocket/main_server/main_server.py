@@ -8,7 +8,7 @@ from lnd_grpc import lnd_grpc
 from lnd_grpc.lnd_grpc import Client
 
 from website.logger import log
-from websocket.sessions.session_registry import SessionRegistry
+from websocket.main_server.sessions.session_registry import SessionRegistry
 from websocket.utilities import get_server_id
 
 

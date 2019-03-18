@@ -18,7 +18,7 @@ from websocket.constants import (
 from websocket.utilities import get_server_id
 
 
-class InvoiceEmitter(object):
+class InvoiceServer(object):
     def __init__(self,
                  lnd_dir: str = None,
                  lnd_network: str = 'mainnet',
@@ -109,24 +109,26 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='LND Node Operator Tools'
+        description='Invoice server'
     )
 
     parser.add_argument(
         '--macaroon',
         '-m',
-        type=str
+        type=str,
+        default=None
     )
 
     parser.add_argument(
         '--tls',
         '-t',
-        type=str
+        type=str,
+        default=None
     )
 
     args = parser.parse_args()
 
-    InvoiceEmitter(
+    InvoiceServer(
         macaroon_path=args.macaroon,
         tls_cert_path=args.tls
     )
