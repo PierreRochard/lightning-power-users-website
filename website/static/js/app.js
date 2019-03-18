@@ -14,6 +14,15 @@ document.addEventListener('DOMContentLoaded', async function () {
     capacityFeeRateSelect.onchange = changeEventHandler;
     changeEventHandler();
 
+    document.onkeydown = null;
+    document.onkeydown = function(event) {
+        if (event.which === 13 || event.which === 9) {
+            connectForm.dispatchEvent(new Event("submit", {cancelable: true}));
+            event.preventDefault();
+        }
+    };
+    const connectTextarea = document.getElementById('connect_textarea');
+    connectTextarea.focus();
 
     function changeEventHandler() {
         const capacitySelect = document.querySelector('select[name="capacity"]');
@@ -95,7 +104,6 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     const connectForm = document.getElementById('connect_form');
     const connectButton = document.getElementById('connect_button');
-    const connectTextarea = document.getElementById('connect_textarea');
     const progressBar = document.getElementById('progress-bar');
     const progressBarDiv = document.getElementById('progress-bar-div');
 
@@ -154,14 +162,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         switch(msg.action) {
             case "registered":
                 console.log("registered");
-                document.onkeydown = null;
-                document.onkeydown = function(event) {
-                    if (event.which === 13 || event.which === 9) {
-                        connectForm.dispatchEvent(new Event("submit", {cancelable: true}));
-                        event.preventDefault();
-                    }
-                };
-                connectTextarea.focus();
                 break;
             case "connected":
                 console.log("connected");

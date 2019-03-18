@@ -2,8 +2,6 @@ import json
 from decimal import Decimal
 
 from flask_qrcode import QRcode
-# noinspection PyProtectedMember
-from grpc._channel import _Rendezvous
 from structlog import get_logger
 from websockets import WebSocketServerProtocol
 
@@ -179,27 +177,6 @@ class Session(object):
         if is_connected:
             self.log.debug(
                 'Already connected to peer',
-                remote_pubkey=self.remote_pubkey
-            )
-            await self.send_connected()
-            return
-        elif self.remote_host is not None:
-            address = '@'.join([self.remote_pubkey, self.remote_host])
-            try:
-                self.rpc.connect(address=address, timeout=3)
-            except _Rendezvous as e:
-                details = e.details()
-                self.log.error(
-                    'gRPC connect to peer failed',
-                    remote_pubkey=self.remote_pubkey,
-                    remote_host=self.remote_host,
-                    details=details,
-                    exc_info=True
-                )
-                await self.send_error_message(please_connect)
-                return
-            self.log.debug(
-                'Connected to peer',
                 remote_pubkey=self.remote_pubkey
             )
             await self.send_connected()
