@@ -4,20 +4,21 @@ from decimal import Decimal
 from flask_qrcode import QRcode
 # noinspection PyProtectedMember
 from grpc._channel import _Rendezvous
-from sqlalchemy.orm.exc import NoResultFound
 from structlog import get_logger
 from websockets import WebSocketServerProtocol
 
 from lnd_grpc.lnd_grpc import Client
 from lnd_sql import session_scope
-from lnd_sql.models import ActivePeers
 from lnd_sql.models.contrib.inbound_capacity_request import \
     InboundCapacityRequest
 from lnd_sql.scripts.upsert_invoices import UpsertInvoices
 from website.constants import EXPECTED_BYTES, CAPACITY_FEE_RATES
 from websocket.constants import PUBKEY_LENGTH
-from websocket.queries import InboundCapacityRequestQueries
-from websocket.queries.channel_queries import ChannelQueries
+from websocket.queries import (
+    ActivePeerQueries,
+    ChannelQueries,
+    InboundCapacityRequestQueries
+)
 
 
 class Session(object):
@@ -169,63 +170,44 @@ class Session(object):
         if not self.remote_pubkey:
             return
 
-        # Connect to peer
-        if self.remote_host is None:
+        please_connect = 'Error: please connect to our node 0331f80652fb840239df8dc99205792bba2e559a05469915804c08420230e23c7c@lightningpowerusers.com:9735'
+        is_connected = ActivePeerQueries.is_connected(self.remote_pubkey)
+        if is_connected:
+            self.log.debug(
+                'Already connected to peer',
+                remote_pubkey=self.remote_pubkey
+            )
+            await self.send_connected()
+            return
+        elif self.remote_host is not None:
+            address = '@'.join([self.remote_pubkey, self.remote_host])
             try:
-                with session_scope() as session:
-                    peer = (
-                        session.query(ActivePeers).filter(
-                            ActivePeers.remote_pubkey == self.remote_pubkey)
-                        .one()
-                    )
-                self.log.debug(
-                    'Already connected to peer',
-                    remote_pubkey=self.remote_pubkey
-                )
-                await self.send_connected()
-                return
-            except NoResultFound:
-                self.log.debug(
-                    'Unknown PubKey, please provide pubkey@host:port',
-                    pubkey=self.remote_pubkey,
+                self.rpc.connect(address=address, timeout=3)
+            except _Rendezvous as e:
+                details = e.details()
+                self.log.error(
+                    'gRPC connect to peer failed',
+                    remote_pubkey=self.remote_pubkey,
+                    remote_host=self.remote_host,
+                    details=details,
                     exc_info=True
                 )
-                await self.send_error_message(
-                    'Unknown PubKey, please provide pubkey@host:port'
-                )
+                await self.send_error_message(please_connect)
                 return
-
-        try:
-            address = '@'.join([self.remote_pubkey, self.remote_host])
-            self.rpc.connect(address=address, timeout=3)
             self.log.debug(
                 'Connected to peer',
                 remote_pubkey=self.remote_pubkey
             )
             await self.send_connected()
             return
-
-        except _Rendezvous as e:
-            details = e.details()
-            if 'already connected to peer' in details:
-                self.log.debug(
-                    'Already connected to peer',
-                    remote_pubkey=self.remote_pubkey
-                )
-                await self.send_connected()
-                return
-            else:
-                self.log.error(
-                    'connect_peer',
-                    remote_pubkey=self.remote_pubkey,
-                    remote_host=self.remote_host,
-                    details=details,
-                    exc_info=True
-                )
-                await self.send_error_message(
-                    f'Error: {details}, please connect to our node 0331f80652fb840239df8dc99205792bba2e559a05469915804c08420230e23c7c@lightningpowerusers.com:9735'
-                )
-                return
+        else:
+            self.log.debug(
+                'Unknown PubKey',
+                pubkey=self.remote_pubkey,
+                exc_info=True
+            )
+            await self.send_error_message(please_connect)
+            return
 
     async def confirm_capacity(self, form_data):
         self.log.debug(
