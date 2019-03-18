@@ -8,9 +8,6 @@ from structlog import get_logger
 from websockets import WebSocketServerProtocol
 
 from lnd_grpc.lnd_grpc import Client
-from lnd_sql import session_scope
-from lnd_sql.models.contrib.inbound_capacity_request import \
-    InboundCapacityRequest
 from lnd_sql.scripts.upsert_invoices import UpsertInvoices
 from website.constants import EXPECTED_BYTES, CAPACITY_FEE_RATES
 from websocket.constants import PUBKEY_LENGTH
@@ -42,7 +39,14 @@ class Session(object):
         self.remote_host = None
         self.remote_pubkey = None
 
+        self.capacity = None
         self.reciprocate_capacity = None
+        self.capacity_fee_rate = None
+        self.capacity_fee = None
+
+        self.transaction_fee_rate = None
+        self.transaction_fee = None
+        self.total_fee = None
 
         logger = get_logger()
         self.log = logger.bind(session_id=session_id)
@@ -215,26 +219,26 @@ class Session(object):
             session_id=self.session_id,
             form_data=form_data
         )
-        capacity = int([f['value'] for f in form_data
+        self.capacity = int([f['value'] for f in form_data
                         if f['name'] == 'capacity'][0])
         try:
-            capacity_fee_rate = Decimal(
+            self.capacity_fee_rate = Decimal(
                 [f['value'] for f in form_data
                  if f['name'] == 'capacity_fee_rate'][0]
             )
-            if capacity_fee_rate not in [c[0] for c in CAPACITY_FEE_RATES]:
+            if self.capacity_fee_rate not in [c[0] for c in CAPACITY_FEE_RATES]:
                 await self.send_error_message('Invalid capacity fee rate')
                 return
         except IndexError:
-            capacity_fee_rate = 0
-            if capacity != self.reciprocate_capacity:
+            self.capacity_fee_rate = Decimal('0.00')
+            if self.capacity != self.reciprocate_capacity:
                 await self.send_error_message('Invalid capacity')
                 return
-
+        self.capacity_fee = self.capacity * self.capacity_fee_rate
         InboundCapacityRequestQueries.update_capacity(
             session_id=self.session_id,
-            capacity=capacity,
-            capacity_fee_rate=capacity_fee_rate
+            capacity=self.capacity,
+            capacity_fee_rate=self.capacity_fee_rate
         )
         await self.send_confirmed_capacity()
 
@@ -244,47 +248,43 @@ class Session(object):
             session_id=self.session_id,
             form_data=form_data
         )
-        with session_scope() as session:
-            inbound_capacity_request: InboundCapacityRequest = (
-                session.query(InboundCapacityRequest)
-                    .filter(InboundCapacityRequest.session_id == self.session_id)
-                    .order_by(InboundCapacityRequest.updated_at.desc())
-                    .first()
-            )
+        self.transaction_fee_rate = int(
+            [f['value'] for f in form_data
+             if f['name'] == 'transaction_fee_rate'][0]
+        )
+        if not self.transaction_fee_rate > 0:
+            await self.send_error_message('Invalid transaction fee rate')
+            return
+        self.transaction_fee = self.transaction_fee_rate * EXPECTED_BYTES
+        self.total_fee = self.capacity_fee + self.transaction_fee
 
-            inbound_capacity_request.transaction_fee_rate = int([f['value'] for f in form_data
-                                    if f['name'] == 'transaction_fee_rate'][0])
-            assert inbound_capacity_request.transaction_fee_rate > 0
-            inbound_capacity_request.expected_bytes = EXPECTED_BYTES
-            inbound_capacity_request.transaction_fee = inbound_capacity_request.transaction_fee_rate * EXPECTED_BYTES
-            inbound_capacity_request.total_fee = inbound_capacity_request.capacity_fee + inbound_capacity_request.transaction_fee
+        memo = 'Lightning Power Users capacity request: '
+        if self.capacity_fee_rate:
+            memo += f'{self.capacity} @ {self.capacity_fee_rate}'
+        else:
+            memo += f'reciprocate {self.capacity}'
 
-            memo = 'Lightning Power Users capacity request: '
-            if inbound_capacity_request.capacity_fee_rate:
-                memo += f'{inbound_capacity_request.capacity} ' \
-                    f'@ {inbound_capacity_request.capacity_fee_rate}'
-            else:
-                memo += f'reciprocate {inbound_capacity_request.capacity}'
+        add_invoice_response = self.rpc.add_invoice(
+            value=int(self.total_fee),
+            memo=memo
+        )
+        invoice = self.rpc.lookup_invoice(r_hash=add_invoice_response.r_hash)
+        UpsertInvoices.upsert(
+            single_invoice=invoice,
+            local_pubkey=self.local_pubkey
+        )
 
-            add_invoice_response = self.rpc.add_invoice(
-                value=int(inbound_capacity_request.total_fee),
-                memo=memo
-            )
-            invoice = self.rpc.lookup_invoice(r_hash=add_invoice_response.r_hash)
-            UpsertInvoices.upsert(
-                single_invoice=invoice,
-                local_pubkey=self.local_pubkey
-            )
+        InboundCapacityRequestQueries.update_tx_fee_and_invoice(
+            session_id=self.session_id,
+            transaction_fee_rate=self.transaction_fee_rate,
+            r_hash=invoice.r_hash.hex()
+        )
 
-            inbound_capacity_request.payment_request = invoice.payment_request
-            inbound_capacity_request.invoice_r_hash = invoice.r_hash.hex()
-            uri = ':'.join(['lightning',
-                            inbound_capacity_request.payment_request])
-            qrcode = QRcode.qrcode(uri, border=10)
-            payment_request = inbound_capacity_request.payment_request
+        uri = ':'.join(['lightning', invoice.payment_request])
+        qrcode = QRcode.qrcode(uri, border=10)
 
         await self.send_payreq(
-            payment_request=payment_request,
+            payment_request=invoice.payment_request,
             uri=uri,
             qrcode=qrcode
         )

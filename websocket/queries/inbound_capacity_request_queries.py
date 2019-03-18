@@ -6,7 +6,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from lnd_sql import session_scope
 from lnd_sql.models import InboundCapacityRequest
-from website.constants import CAPACITY_FEE_RATES
+from website.constants import CAPACITY_FEE_RATES, EXPECTED_BYTES
 from website.logger import log
 
 
@@ -36,6 +36,22 @@ class InboundCapacityRequestQueries(object):
             delta = [c[2] for c in CAPACITY_FEE_RATES if c[0] == capacity_fee_rate][0]
             today = datetime.utcnow().replace(tzinfo=pytz.utc)
             request.keep_open_until = today + delta
+
+    @staticmethod
+    def update_tx_fee_and_invoice(session_id: str, transaction_fee_rate: int,
+                                  r_hash: str):
+        with session_scope() as session:
+            icr: InboundCapacityRequest = (
+                session.query(InboundCapacityRequest)
+                    .filter(InboundCapacityRequest.session_id == session_id)
+                    .order_by(InboundCapacityRequest.updated_at.desc())
+                    .first()
+            )
+            icr.transaction_fee_rate = transaction_fee_rate
+            icr.expected_bytes = EXPECTED_BYTES
+            icr.transaction_fee = icr.transaction_fee_rate * EXPECTED_BYTES
+            icr.total_fee = icr.capacity_fee + icr.transaction_fee
+            icr.invoice_r_hash = r_hash
 
     @staticmethod
     def get_by_invoice(r_hash: str) -> dict:
