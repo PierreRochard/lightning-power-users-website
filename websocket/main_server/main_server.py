@@ -127,9 +127,16 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--ssl',
+        '--sslcert',
         type=str,
         help='Path for WS SSL cert',
+        default=None
+    )
+
+    parser.add_argument(
+        '--sslkey',
+        type=str,
+        help='Path for WS SSL key',
         default=None
     )
 
@@ -149,7 +156,7 @@ if __name__ == '__main__':
     )
     if args.ssl:
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        ssl_context.load_cert_chain(args.ssl)
+        ssl_context.load_cert_chain(certfile=args.sslcert, keyfile=args.sslkey)
     else:
         ssl_context = None
 
