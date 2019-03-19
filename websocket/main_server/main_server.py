@@ -154,7 +154,7 @@ if __name__ == '__main__':
         macaroon_path=args.macaroon,
         tls_cert_path=args.tls
     )
-    if args.ssl:
+    if args.sslcert:
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         ssl_context.load_cert_chain(certfile=args.sslcert, keyfile=args.sslkey)
     else:
