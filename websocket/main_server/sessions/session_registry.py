@@ -1,6 +1,6 @@
 from typing import Dict
 
-from websockets import WebSocketServerProtocol
+from aiohttp.web_ws import WebSocketResponse
 
 from lnd_grpc.lnd_grpc import Client
 from lnd_grpc.protos.rpc_pb2 import GetInfoResponse
@@ -22,7 +22,7 @@ class SessionRegistry(object):
             self,
             session_id: str,
             data_from_client: dict,
-            session_websocket: WebSocketServerProtocol = None
+            session_websocket: WebSocketResponse = None
     ):
         action = data_from_client.get('action', None)
         if action is None:
@@ -64,7 +64,7 @@ class SessionRegistry(object):
             )
 
     async def register(self, session_id: str,
-                       session_websocket: WebSocketServerProtocol):
+                       session_websocket: WebSocketResponse):
         log.info(
             'Registering session_id',
             session_id=session_id

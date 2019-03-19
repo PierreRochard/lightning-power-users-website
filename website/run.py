@@ -9,7 +9,7 @@ from flask_qrcode import QRcode
 from webassets import Bundle
 
 from website.constants import FLASK_SECRET_KEY
-from website.extensions import bitcoind, cache, lnd
+from website.extensions import cache
 from website.views.home_view import HomeView
 
 
@@ -39,9 +39,7 @@ class App(Flask):
                     filters='jsmin', output='gen/packed.js')
         assets.register('js_all', js)
 
-        bitcoind.init_app(self)
         cache.init_app(self)
-        lnd.init_app(self)
         QRcode(self)
         self.debug = False
         self.config['SECRET_KEY'] = FLASK_SECRET_KEY

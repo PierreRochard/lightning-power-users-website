@@ -1,4 +1,4 @@
-MAIN_SERVER_WEBSOCKET_URL = 'ws://localhost:8765'
+MAIN_SERVER_WEBSOCKET_URL = 'wss://lightningpowerusers.com:8765'
 
 CHANNEL_OPENING_SERVER_WEBSOCKET_URL = 'ws://localhost:8710'
 
