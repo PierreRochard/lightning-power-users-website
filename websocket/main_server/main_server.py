@@ -1,5 +1,6 @@
 import asyncio
 import json
+import ssl
 from uuid import UUID
 
 import websockets
@@ -125,6 +126,20 @@ if __name__ == '__main__':
         default='127.0.0.1'
     )
 
+    parser.add_argument(
+        '--ssl',
+        type=str,
+        help='Path for WS SSL cert',
+        default=None
+    )
+
+    parser.add_argument(
+        '--wshost',
+        type=str,
+        help='Host for WS',
+        default='localhost'
+    )
+
     args = parser.parse_args()
     main_server = MainServer(
         grpc_host=args.host,
@@ -132,7 +147,15 @@ if __name__ == '__main__':
         macaroon_path=args.macaroon,
         tls_cert_path=args.tls
     )
-    start_server = websockets.serve(main_server.run, 'localhost', 8765)
+    if args.ssl:
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ssl_context.load_cert_chain(args.ssl)
+    else:
+        ssl_context = None
+
+    start_server = websockets.serve(ws_handler=main_server.run,
+                                    host=args.wshost,
+                                    port=8765)
 
     asyncio.get_event_loop().run_until_complete(start_server)
     asyncio.get_event_loop().run_forever()
