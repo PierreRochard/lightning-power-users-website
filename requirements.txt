@@ -22,6 +22,7 @@ protobuf
 psutil
 psycopg2
 PyTest
+pytz
 python-bitcoinlib
 requests
 sqlalchemy
