@@ -118,3 +118,15 @@ pyvenv.cfg
 .venv
 pip-selfcheck.json
 
+/tools/remote/
+/tools/secrets.py
+/tools/credentials.json
+/tools/token.json
+/website/package-lock.json
+/website/webpack.config.js
+!/website/assets/scripts/
+/website/static/gen/
+!/database/scripts/
+/remote/
+/website/supervisord.conf
+/websocket/supervisord.conf

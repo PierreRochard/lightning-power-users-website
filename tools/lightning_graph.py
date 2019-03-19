@@ -4,13 +4,11 @@ from typing import List
 
 from google.protobuf.json_format import MessageToDict
 import networkx as nx
+# noinspection PyProtectedMember
 from grpc._channel import _Rendezvous
 
-from node_launcher.logging import log
-from node_launcher.node_set.lnd_client.rpc_pb2 import ChannelGraph, \
-    OpenStatusUpdate
-from tools.lnd_client import get_local_client, lnd_remote_client
-from tools.node_operator import NodeOperator
+from lnd_grpc.protos.rpc_pb2 import ChannelGraph, OpenStatusUpdate
+from website.logger import log
 
 
 def convert_to_dict(data):
@@ -28,11 +26,11 @@ def save_to_csv(name: str, data: List[dict]):
 
 
 class LightningGraph(object):
-    def __init__(self, pubkey: str):
-        self.pubkey = pubkey
-        self.lnd_client = get_local_client()
-        self.node_operator = NodeOperator()
-        self.graph: ChannelGraph = self.lnd_client.get_graph()
+    def __init__(self, local_pubkey: str, node_operator):
+        self.node_operator = node_operator
+        self.local_pubkey = local_pubkey
+        self.rpc = self.node_operator.rpc
+        self.graph: ChannelGraph = self.rpc.describe_graph()
         self.nodes = convert_to_dict(self.graph.nodes)
         self.edges = convert_to_dict(self.graph.edges)
 
@@ -45,7 +43,7 @@ class LightningGraph(object):
                      data.items()]
         list_data.sort(key=lambda x: x['score'], reverse=True)
         log.info(name, lpu_rank=[i for i, p in enumerate(list_data) if
-                                 p['pub_key'] == self.pubkey][0])
+                                 p['pub_key'] == self.local_pubkey][0])
 
         for page in list_data[0:top]:
             log.debug(f'Processing {name} result', **page)
@@ -72,7 +70,7 @@ class LightningGraph(object):
                 )
                 continue
 
-            response = lnd_remote_client.open_channel(
+            response = self.rpc.open_channel(
                 node_pubkey_string=node.pubkey,
                 local_funding_amount=max(1000000, node.remote_balance),
                 push_sat=0,
@@ -107,30 +105,3 @@ class LightningGraph(object):
         # path_graph = nx.path_graph(G)
         # data = nx.eigenvector_centrality(path_graph)
         # self.print_summary('eigen', data)
-
-
-if __name__ == '__main__':
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        description='Interact with the Lightning graph'
-    )
-
-    parser.add_argument(
-        'action',
-        type=str
-    )
-
-    parser.add_argument(
-        '--pubkey',
-        '-p',
-        type=str
-    )
-
-    args = parser.parse_args()
-    lightning_graph = LightningGraph(pubkey=args.pubkey)
-    if args.action == 'csv':
-        lightning_graph.to_csv()
-    elif args.action == 'open_channels':
-        data = lightning_graph.pagerank()
-        lightning_graph.open_channels('pagerank', data, top=50)

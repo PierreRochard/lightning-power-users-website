@@ -10,8 +10,8 @@ from google.protobuf.json_format import MessageToDict, ParseDict
 from grpc import StatusCode
 from wtforms import Form, StringField, IntegerField, BooleanField, validators
 
-from node_launcher.node_set import NodeSet
 from website.constants import CACHE_PATH
+from website.extensions import lnd
 
 wtforms_type_map = {
     3: IntegerField,  # int64
@@ -83,11 +83,10 @@ class LNDModelView(BaseModelView):
 
     def get_list(self, page=None, sort_field=None, sort_desc=False, search=None,
                  filters=None, page_size=None):
-        node_set = NodeSet()
         cache_file = os.path.join(CACHE_PATH, self.get_query + '.json')
 
         try:
-            results = getattr(node_set.lnd_client, self.get_query)()
+            results = getattr(lnd, self.get_query)()
             with open(cache_file, 'w') as f:
                 json.dump([MessageToDict(m) for m in results], f)
         except Exception as e:

@@ -1,44 +1,37 @@
-import json
-import os
-from datetime import datetime
-from pprint import pformat
+import uuid
 
-import humanize
-from flask import render_template
+from bitcoin.core import COIN
+from flask import render_template, session
 from flask_admin import BaseView, expose
-# noinspection PyPackageRequirements
-from google.protobuf.json_format import MessageToDict
 
-from node_launcher.node_set import NodeSet
-from website.constants import CACHE_PATH
-from website.extensions import cache
+from lnd_sql import session_scope
+from lnd_sql.models import ExchangeRates
+from website.constants import EXPECTED_BYTES
+from website.forms.request_capacity_form import get_request_capacity_form
+from websocket.constants import MAIN_SERVER_WEBSOCKET_URL
 
 
 class HomeView(BaseView):
     @expose('/')
-    @cache.memoize(timeout=600)
     def index(self):
+        with session_scope() as db_session:
+            last_price = (
+                db_session.query(ExchangeRates.last)
+                .order_by(ExchangeRates.timestamp.desc())
+                .limit(1)
+                .scalar()
+            )
+        price_per_sat = last_price / COIN
+        form = get_request_capacity_form()
 
-        # noinspection PyBroadException
-        info_cache_file = os.path.join(CACHE_PATH, 'info.json')
-        try:
-            node_set = NodeSet()
-            info = MessageToDict(node_set.lnd_client.get_info())
-            best_header_timestamp = int(info['best_header_timestamp'])
-            best_header_datetime = datetime.fromtimestamp(best_header_timestamp)
-            best_header_strftime = best_header_datetime.strftime('%c')
-            best_header_humanized = humanize.naturaltime(best_header_datetime)
-            info['best_header_timestamp'] = f'{best_header_strftime} ({best_header_humanized})'
-            with open(info_cache_file, 'w') as f:
-                json.dump(info, f)
-        except Exception as e:
-            raise
-            # Todo add logging
-            print(pformat(e))
-            try:
-                with open(info_cache_file, 'r') as f:
-                    info = json.load(f)
-            except FileNotFoundError:
-                info = {}
-
-        return render_template('index.html', info=info)
+        if session.get('session_id', None) is None:
+            session['session_id'] = uuid.uuid4().hex
+        if session.get('session_id', None) is None:
+            session['session_id'] = uuid.uuid4().hex
+        return render_template(
+            'home_view/index.html',
+            WEBSOCKET_HOST=MAIN_SERVER_WEBSOCKET_URL,
+            form=form,
+            price_per_sat=price_per_sat,
+            EXPECTED_BYTES=EXPECTED_BYTES
+        )

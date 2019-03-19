@@ -2,26 +2,26 @@
 
     <div class="panel panel-default">
         <div class="panel-heading">
-            <h3 class="panel-title">{{ title }}</h3>
+            <h4 class="panel-title">{{ title }}</h4>
         </div>
         <div class="panel-body">
             <dl class="dl-horizontal">
-                {% for key, value in data_dict.items() %}
+            {% for key in data_dict.keys()|sort %}
                     <dt>{{ key }}</dt>
                     <dd>
-                        {% if value is string or value is number %}
-                            {{ value }}
-                        {% elif value is mapping %}
+                        {% if data_dict[key] is string or data_dict[key] is number %}
+                            {{ data_dict[key] }}
+                        {% elif data_dict[key] is mapping %}
                             <ul class="list-unstyled">
-                                {% for nested_key, nested_value in value.items() %}
+                                {% for nested_key, nested_value in data_dict[key].items() %}
                                     <li>
                                         {{ nested_key }}: {{ nested_value }}
                                     </li>
                                 {% endfor %}
                             </ul>
-                        {% elif value is iterable %}
+                        {% elif data_dict[key] is iterable %}
                             <ul class="list-unstyled">
-                                {% for item in value %}
+                                {% for item in data_dict[key] %}
                                     <li>{{ item }}</li>
                                 {% endfor %}
                             </ul>

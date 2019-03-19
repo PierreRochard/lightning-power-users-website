@@ -5,13 +5,13 @@
 {% block body %}
 
     <script type="text/javascript" charset="utf-8">
-        var exampleSocket = new WebSocket("ws://localhost:8765");
-        exampleSocket.onopen = function (event) {
-            const tracker = "{{ session['tracker'] }}";
-            const tracker_object = JSON.stringify({tracker: tracker});
-            exampleSocket.send(tracker_object);
+        var user_websocket = new WebSocket("ws://localhost:8765");
+        user_websocket.onopen = function (event) {
+            const user_id = "{{ session['user_id'] }}";
+            const user_id_object = JSON.stringify({user_id: user_id});
+            user_websocket.send(user_id_object);
         };
-        exampleSocket.onmessage = function (event) {
+        user_websocket.onmessage = function (event) {
             console.log(event.data);
             const cardBody = document.querySelector('body > div.album.py-5 > div > div > div > div > div > div > div.form-group');
             if (cardBody) {
@@ -19,54 +19,6 @@
             }
         }
     </script>
-
-    <style>
-        .paid {
-            position: relative;
-        }
-
-        .paid::before {
-            content: "";
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            opacity: 0.3;
-            z-index: 1;
-            top: 0;
-            left: 0;
-        }
-
-        .paid::after {
-            content: "Payment received, thank you!";
-            position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            right: 0;
-            z-index: 3;
-            overflow: hidden;
-            font-size: 3em;
-            color: lightgrey;
-            text-align: center;
-            vertical-align: middle;
-            text-shadow: 0px 0px 5px black;
-            background: rgb(40, 40, 40);
-            padding: 150px;
-            animation-name: gotPaid;
-            animation-duration: 1s;
-            animation-iteration-count: 1;
-            border-radius: 50px;
-        }
-
-        @keyframes gotPaid {
-            0% {
-                opacity: 0;
-            }
-            100% {
-                opacity: 1;
-            }
-        }
-    </style>
 
     <div class="album py-5">
         <div class="container">

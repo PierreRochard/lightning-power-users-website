@@ -5,24 +5,26 @@ from google.protobuf.json_format import MessageToDict
 # noinspection PyProtectedMember
 from grpc._channel import _Rendezvous
 
-from node_launcher.logging import log
+from lnd_grpc.lnd_grpc import Client
+from website.logger import log
 from tools.channel import Channel
-from tools.lnd_client import lnd_remote_client
 
 
 class Node(object):
     info: dict
     peer_info: dict
     channels: List[Channel]
+    rpc: Client
 
-    def __init__(self, pubkey: str):
+    def __init__(self, rpc: Client, pubkey: str):
+        self.rpc = rpc
         self.pubkey = pubkey
         self.channels = []
         self.peer_info = None
         self.info = None
         self.state = None
         try:
-            self.info = MessageToDict(lnd_remote_client.get_node_info(pubkey))
+            self.info = MessageToDict(self.rpc.get_node_info(pubkey))
             self.state = 'online'
         except _Rendezvous as e:
             details = e.details().lower()
@@ -45,9 +47,7 @@ class Node(object):
         )
         for address in self.info['node'].get('addresses', []):
             try:
-                lnd_remote_client.connect_peer(self.pubkey,
-                                               address['addr'],
-                                               timeout=5)
+                self.rpc.connect_peer(self.pubkey, address['addr'], timeout=5)
                 log.info(
                     'Successfully reconnected',
                     pubkey=self.pubkey,
@@ -58,7 +58,8 @@ class Node(object):
                 log.debug(
                     'Failed to reconnect',
                     pubkey=self.pubkey,
-                    address=address
+                    address=address,
+                    details=e.details
                 )
                 return False
 
