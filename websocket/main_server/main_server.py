@@ -1,42 +1,47 @@
-import asyncio
 import json
 import ssl
 from uuid import UUID
 
-import websockets
+from aiohttp import web, WSMsgType
+from aiohttp.web_request import Request
 
 from lnd_grpc import lnd_grpc
-from lnd_grpc.lnd_grpc import Client
 
 from website.logger import log
 from websocket.main_server.sessions.session_registry import SessionRegistry
 from websocket.utilities import get_server_id
 
 
-class MainServer(object):
-    rpc: Client
+class Websocket(web.View):
+    def __init__(self, request: Request):
+        super().__init__(request)
 
-    def __init__(self, grpc_host, grpc_port, tls_cert_path, macaroon_path):
-        self.rpc = lnd_grpc.Client(
-            grpc_host=grpc_host,
-            grpc_port=grpc_port,
-            tls_cert_path=tls_cert_path,
-            macaroon_path=macaroon_path
-        )
         self.invoice_server_id = get_server_id('invoices')
         self.channel_server_id = get_server_id('channels')
-        self.sessions = SessionRegistry(self.rpc)
 
-    async def run(self, websocket, path):
-        async for data_string_from_client in websocket:
+    async def get(self):
+        websocket = web.WebSocketResponse()
+        await websocket.prepare(self.request)
+
+        async for msg in websocket:
+            if msg.type == WSMsgType.text:
+                if msg.data == 'close':
+                    await websocket.close()
+                    return
+
+            elif msg.type == WSMsgType.error:
+                log.debug(
+                    'ws connection closed with exception %s' % websocket.exception())
+                return
+
             # noinspection PyBroadException
             try:
-                data_from_client = json.loads(data_string_from_client)
+                data_from_client = json.loads(msg.data)
             except:
                 log.error(
                     'Error loading json',
                     exc_info=True,
-                    data_string_from_client=data_string_from_client
+                    data_string_from_client=msg.data
                 )
                 return
 
@@ -44,7 +49,7 @@ class MainServer(object):
             if session_id is None:
                 log.error(
                     'session_id is missing',
-                    data_string_from_client=data_string_from_client
+                    data_string_from_client=msg.data
                 )
                 return
 
@@ -53,14 +58,14 @@ class MainServer(object):
             except ValueError:
                 log.error(
                     'Invalid session_id',
-                    data_string_from_client=data_string_from_client
+                    data_string_from_client=msg.data
                 )
                 return
 
             server_id = data_from_client.get('server_id', None)
 
             if server_id is None:
-                await self.sessions.handle_session_message(
+                await self.request.app['sessions'].handle_session_message(
                     session_websocket=websocket,
                     session_id=session_id,
                     data_from_client=data_from_client
@@ -70,7 +75,7 @@ class MainServer(object):
                 invoice_data = data_from_client['invoice_data']
                 invoice_data['action'] = 'receive_payment'
                 log.debug('emit invoice_data', invoice_data=invoice_data)
-                await self.sessions.handle_session_message(
+                await self.request.app['sessions'].handle_session_message(
                     session_id=data_from_client['session_id'],
                     data_from_client=invoice_data
                 )
@@ -81,14 +86,14 @@ class MainServer(object):
                         'open_channel_update', None),
                     'action': 'channel_open'
                 }
-                await self.sessions.handle_session_message(
+                await self.request.app['sessions'].handle_session_message(
                     session_id=session_id,
                     data_from_client=message
                 )
             else:
                 log.error(
                     'Invalid server_id',
-                    data_string_from_client=data_string_from_client
+                    data_string_from_client=msg.data
                 )
                 return
 
@@ -148,21 +153,27 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    main_server = MainServer(
-        grpc_host=args.host,
-        grpc_port=args.port,
-        macaroon_path=args.macaroon,
-        tls_cert_path=args.tls
-    )
     if args.sslcert:
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         ssl_context.load_cert_chain(certfile=args.sslcert, keyfile=args.sslkey)
     else:
         ssl_context = None
 
-    start_server = websockets.serve(ws_handler=main_server.run,
-                                    host=args.wshost,
-                                    port=8765)
+    app = web.Application()
+    app['grpc'] = lnd_grpc.Client(
+        grpc_host=args.host,
+        grpc_port=args.port,
+        macaroon_path=args.macaroon,
+        tls_cert_path=args.tls
+    )
+    app['sessions'] = SessionRegistry(app['grpc'])
+    app.add_routes([web.get('/', Websocket)])
 
-    asyncio.get_event_loop().run_until_complete(start_server)
-    asyncio.get_event_loop().run_forever()
+    web.run_app(app, host=args.wshost, port=8765, ssl_context=ssl_context)
+    #
+    # start_server = websockets.serve(ws_handler=main_server.run,
+    #                                 host=args.wshost,
+    #                                 port=8765)
+    #
+    # asyncio.get_event_loop().run_until_complete(start_server)
+    # asyncio.get_event_loop().run_forever()

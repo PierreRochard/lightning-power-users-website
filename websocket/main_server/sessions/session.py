@@ -1,9 +1,9 @@
 import json
 from decimal import Decimal
 
+from aiohttp.web_ws import WebSocketResponse
 from flask_qrcode import QRcode
 from structlog import get_logger
-from websockets import WebSocketServerProtocol
 
 from lnd_grpc.lnd_grpc import Client
 from lnd_sql.scripts.upsert_invoices import UpsertInvoices
@@ -22,12 +22,12 @@ class Session(object):
     remote_pubkey: str
     rpc: Client
     session_id: str
-    ws: WebSocketServerProtocol
+    ws: WebSocketResponse
 
     def __init__(self,
                  session_id: str,
                  local_pubkey: str,
-                 ws: WebSocketServerProtocol,
+                 ws: WebSocketResponse,
                  rpc: Client):
         self.session_id = session_id
         self.local_pubkey = local_pubkey
@@ -51,7 +51,7 @@ class Session(object):
 
     async def send(self, message):
         message_string = json.dumps(message)
-        await self.ws.send(message_string)
+        await self.ws.send_str(message_string)
 
     async def send_registered(self):
         message = {
