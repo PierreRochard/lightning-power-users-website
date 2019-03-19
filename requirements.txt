@@ -6,6 +6,7 @@ flask-admin
 Flask-Assets
 flask-caching
 Flask-QRcode
+flask-webpack
 flask-wtf
 Frozen-Flask
 google-api-python-client
