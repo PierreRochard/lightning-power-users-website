@@ -16,6 +16,16 @@ keyring
 networkx
 oauth2client
 psycopg2
+googleapis-common-protos
+grpcio
+grpcio-tools
+humanize
+jinja2
+keyring
+pillow
+protobuf
+psutil
+PyTest
 python-bitcoinlib
 requests
 sqlalchemy
@@ -23,3 +33,4 @@ sqlalchemy-postgres-copy
 structlog
 webassets
 websockets
+wtforms
