@@ -170,10 +170,3 @@ if __name__ == '__main__':
     app.add_routes([web.get('/', Websocket)])
 
     web.run_app(app, host=args.wshost, port=8765, ssl_context=ssl_context)
-    #
-    # start_server = websockets.serve(ws_handler=main_server.run,
-    #                                 host=args.wshost,
-    #                                 port=8765)
-    #
-    # asyncio.get_event_loop().run_until_complete(start_server)
-    # asyncio.get_event_loop().run_forever()
