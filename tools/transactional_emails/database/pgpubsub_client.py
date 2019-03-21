@@ -30,7 +30,11 @@ def process_message(event):
     # TODO: Query the table if 'row' is not in the data dictionary
     # (due to pg_notify's 8kB payload limit)
 
-    send_email([secure_get('LPU_MAIL_USERNAME')], 'Event', pformat(data))
+    if data['table_name'] == 'public.pending_open_channels':
+        subject = f'{data["table_name"]}: {data["row"]["session_id"]}'
+    else:
+        subject = data['table_name']
+    send_email([secure_get('LPU_MAIL_USERNAME')], subject, pformat(data))
 
 
 listen_thread()
