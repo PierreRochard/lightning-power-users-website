@@ -5,7 +5,7 @@
 {% block body %}
 
     <script type="text/javascript" charset="utf-8">
-        var user_websocket = new WebSocket("ws://localhost:8765");
+        var user_websocket = new WebSocket("wss://lightningpowerusers.com:8765");
         user_websocket.onopen = function (event) {
             const user_id = "{{ session['user_id'] }}";
             const user_id_object = JSON.stringify({user_id: user_id});

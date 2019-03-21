@@ -10,9 +10,9 @@ BEGIN
     json_record = row_to_json(NEW);
 
 --   Creates a DIFF from the OLD row to NEW row on updates, and create a change feed
---   ELSEIF  TG_OP = 'UPDATE' THEN
---     id = NEW.id;
---     json_record = jsonb_diff_val(row_to_json(NEW)::JSONB, row_to_json(OLD)::JSONB);
+  ELSEIF  TG_OP = 'UPDATE' THEN
+    id = NEW.id;
+    json_record = jsonb_diff_val(row_to_json(NEW)::JSONB, row_to_json(OLD)::JSONB);
 
   ELSE
     id = OLD.id;

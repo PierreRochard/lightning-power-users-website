@@ -12,13 +12,36 @@ from website.logger import log
 
 class InboundCapacityRequestQueries(object):
     @staticmethod
-    def insert(session_id: str, remote_pubkey: str, remote_host: str):
+    def insert(session_id: str):
         with session_scope() as session:
             new_request = InboundCapacityRequest()
             new_request.session_id = session_id
-            new_request.remote_pubkey = remote_pubkey
-            new_request.remote_host = remote_host
+            new_request.status = 'registered'
             session.add(new_request)
+
+    @staticmethod
+    def update_status(session_id: str, status: str):
+        with session_scope() as session:
+            request: InboundCapacityRequest = (
+                session.query(InboundCapacityRequest)
+                    .filter(InboundCapacityRequest.session_id == session_id)
+                    .order_by(InboundCapacityRequest.updated_at.desc())
+                    .first()
+            )
+            request.status = status
+
+    @staticmethod
+    def update_connection(session_id: str, remote_pubkey: str, remote_host: str):
+        with session_scope() as session:
+            request: InboundCapacityRequest = (
+                session.query(InboundCapacityRequest)
+                    .filter(InboundCapacityRequest.session_id == session_id)
+                    .order_by(InboundCapacityRequest.updated_at.desc())
+                    .first()
+            )
+            request.remote_pubkey = remote_pubkey
+            request.remote_host = remote_host
+            request.status = 'connected'
 
     @staticmethod
     def update_capacity(session_id: str, capacity: int,
