@@ -10,7 +10,7 @@ class ActivePeerQueries(object):
         with session_scope() as session:
             try:
                 peer = (
-                    session.query(ActivePeers).filter(
+                    session.query(ActivePeers.id).filter(
                         ActivePeers.remote_pubkey == remote_pubkey)
                         .one()
                 )
