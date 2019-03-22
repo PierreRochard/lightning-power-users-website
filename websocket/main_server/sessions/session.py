@@ -14,8 +14,10 @@ from websocket.constants import PUBKEY_LENGTH
 from websocket.queries import (
     ActivePeerQueries,
     ChannelQueries,
-    InboundCapacityRequestQueries
+    InboundCapacityRequestQueries,
+    LightningAddressesQueries
 )
+
 
 
 class Session(object):
@@ -65,7 +67,7 @@ class Session(object):
 
         InboundCapacityRequestQueries.insert(self.session_id)
 
-    async def send_connected(self):
+    async def send_connected(self, status: str):
         data = ChannelQueries.get_peer_channel_totals(self.remote_pubkey)
         self.log.debug('get_peer_channel_totals', data=data)
 
@@ -97,7 +99,7 @@ class Session(object):
             session_id=self.session_id,
             remote_pubkey=self.remote_pubkey,
             remote_host=self.remote_host,
-            status='connected'
+            status=status
         )
 
     async def send_error_message(self, error: str, status: str = None):
@@ -229,6 +231,22 @@ class Session(object):
             remote_host=self.remote_host
         )
 
+    async def try_connect(self, timeout=10):
+        address = '@'.join([self.remote_pubkey, self.remote_host])
+        try:
+            self.rpc.connect(address=address, timeout=timeout)
+            return None
+        except _Rendezvous as e:
+            details = e.details()
+            self.log.error(
+                'Connect to peer failed',
+                remote_pubkey=self.remote_pubkey,
+                remote_host=self.remote_host,
+                details=details,
+                exc_info=True
+            )
+            return details
+
     async def connect_to_peer(self, remote_pubkey_input: str):
         self.log.debug(
             'connect_to_peer',
@@ -239,47 +257,60 @@ class Session(object):
             return
 
         please_connect = 'Error: please connect to our node 0331f80652fb840239df8dc99205792bba2e559a05469915804c08420230e23c7c@lightningpowerusers.com:9735'
+        error = please_connect
+
         is_connected = ActivePeerQueries.is_connected(self.remote_pubkey)
         if is_connected:
             self.log.debug(
                 'Already connected to peer',
                 remote_pubkey=self.remote_pubkey
             )
-            await self.send_connected()
-            return
-        elif self.remote_host is not None:
-            address = '@'.join([self.remote_pubkey, self.remote_host])
-            try:
-                self.rpc.connect(address=address, timeout=10)
-            except _Rendezvous as e:
-                details = e.details()
-                self.log.error(
-                    'gRPC connect to peer failed',
-                    remote_pubkey=self.remote_pubkey,
-                    remote_host=self.remote_host,
-                    details=details,
-                    exc_info=True
-                )
-                await self.send_error_message(please_connect)
-                InboundCapacityRequestQueries.update_status(
-                    session_id=self.session_id,
-                    status=f'grpc_connect_failed: {details}'
-                )
-                return
-            self.log.debug(
-                'Connected to peer',
-                remote_pubkey=self.remote_pubkey
-            )
-            await self.send_connected()
+            await self.send_connected('already_connected')
             return
         else:
             self.log.debug(
-                'Unknown PubKey',
-                pubkey=self.remote_pubkey,
-                exc_info=True
+                'Not connected to peer',
+                remote_pubkey=self.remote_pubkey
             )
-            await self.send_error_message(please_connect)
-            return
+
+        # Use user input host:port
+        if self.remote_host is not None:
+            error = await self.try_connect()
+            if error is None:
+                self.log.debug(
+                    'Connected to peer',
+                    remote_pubkey=self.remote_pubkey
+                )
+                await self.send_connected('connected_with_input')
+                return
+
+        # Query the public graph
+        addresses = LightningAddressesQueries.get(self.remote_pubkey)
+        if addresses is not None:
+            for address in addresses:
+                self.remote_host = address
+                error = await self.try_connect(timeout=3)
+                if error is None:
+                    self.log.debug(
+                        'Connected to peer',
+                        remote_pubkey=self.remote_pubkey
+                    )
+                    await self.send_connected('connected_with_graph')
+                    return
+
+        self.log.debug(
+            'Unknown PubKey',
+            pubkey=self.remote_pubkey,
+            exc_info=True
+        )
+        await self.send_error_message(error)
+        InboundCapacityRequestQueries.update_connection(
+            session_id=self.session_id,
+            remote_pubkey=self.remote_pubkey,
+            remote_host=self.remote_host,
+            status=error
+        )
+        return
 
     async def confirm_capacity(self, form_data):
         self.log.debug(
