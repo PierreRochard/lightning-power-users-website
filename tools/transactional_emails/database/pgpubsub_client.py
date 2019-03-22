@@ -1,8 +1,9 @@
 import json
 import os
-from pprint import pformat
 
 import pgpubsub
+from jinja2 import Template
+from premailer import transform
 
 from lnd_sql.database.session import keyring_get_or_create
 from tools.transactional_emails.send_email import send_email, secure_get
@@ -30,11 +31,37 @@ def process_message(event):
     # TODO: Query the table if 'row' is not in the data dictionary
     # (due to pg_notify's 8kB payload limit)
 
-    if data['table_name'] == 'public.pending_open_channels':
-        subject = f'{data["table_name"]}: {data["row"]["session_id"]}'
+    if data['table_name'] == 'public.inbound_capacity_request':
+        subject = f'{data["row"]["session_id"]} {data["row"]["status"]}'
     else:
         subject = data['table_name']
-    send_email([secure_get('LPU_MAIL_USERNAME')], subject, pformat(data))
 
+    html_body = dict_to_email_template(
+        title=data["row"].get('status', None),
+        table_caption=data["row"].get('status', None),
+        table_data=data["row"]
+    )
+
+    send_email(recipients=[secure_get('LPU_MAIL_USERNAME')],
+               subject=subject, html_body=html_body)
+
+
+def dict_to_email_template(title, table_caption, table_data):
+    email_template = os.path.join('email_template.html')
+    with open(email_template, 'r') as html_template:
+        html_template_string = html_template.read()
+
+    css_template = os.path.join('styles.css')
+    with open(css_template, 'r') as css:
+        css_string = css.read()
+
+    template = Template(html_template_string)
+
+    html_body = template.render(title=title,
+                                css=css_string,
+                                table_caption=table_caption,
+                                table_data=table_data)
+
+    return transform(html_body)
 
 listen_thread()

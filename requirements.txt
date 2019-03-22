@@ -21,6 +21,7 @@ networkx
 oauth2client
 pgpubsub
 pillow
+premailer
 protobuf
 psutil
 psycopg2
