@@ -119,7 +119,8 @@ class Session(object):
         InboundCapacityRequestQueries.update_capacity(
             session_id=self.session_id,
             capacity=self.capacity,
-            capacity_fee_rate=self.capacity_fee_rate
+            capacity_fee_rate=self.capacity_fee_rate,
+            status='confirmed_capacity'
         )
 
     async def send_payreq(self, payment_request, uri, qrcode):
@@ -140,7 +141,8 @@ class Session(object):
         InboundCapacityRequestQueries.update_tx_fee_and_invoice(
             session_id=self.session_id,
             transaction_fee_rate=self.transaction_fee_rate,
-            r_hash=self.invoice.r_hash.hex()
+            r_hash=self.invoice.r_hash.hex(),
+            status='confirmed_chain_fee_and_invoice_sent'
         )
 
     async def send_receive_payment(self):
@@ -150,7 +152,7 @@ class Session(object):
         await self.send(message=message)
 
         InboundCapacityRequestQueries.update_status(self.session_id,
-                                                    'Payment received')
+                                                    'payment_received')
 
     async def send_channel_open(self, data: dict):
         if data.get('error', None):
@@ -164,7 +166,7 @@ class Session(object):
         }
         await self.send(message=message)
         InboundCapacityRequestQueries.update_status(self.session_id,
-                                                    f'Channel opened {txid}')
+                                                    'channel_opened')
 
     async def parse_remote_pubkey(self, remote_pubkey_input: str):
         self.remote_pubkey = remote_pubkey_input.strip()
@@ -286,7 +288,7 @@ class Session(object):
             form_data=form_data
         )
         self.capacity = int([f['value'] for f in form_data
-                        if f['name'] == 'capacity'][0])
+                            if f['name'] == 'capacity'][0])
         try:
             self.capacity_fee_rate = Decimal(
                 [f['value'] for f in form_data
@@ -294,11 +296,23 @@ class Session(object):
             )
             if self.capacity_fee_rate not in [c[0] for c in CAPACITY_FEE_RATES]:
                 await self.send_error_message('Invalid capacity fee rate')
+                InboundCapacityRequestQueries.update_capacity(
+                    session_id=self.session_id,
+                    capacity=self.capacity,
+                    capacity_fee_rate=self.capacity_fee_rate,
+                    status='invalid_capacity_fee_rate'
+                )
                 return
         except IndexError:
             self.capacity_fee_rate = Decimal('0.00')
             if self.capacity != self.reciprocate_capacity:
                 await self.send_error_message('Invalid capacity')
+                InboundCapacityRequestQueries.update_capacity(
+                    session_id=self.session_id,
+                    capacity=self.capacity,
+                    capacity_fee_rate=self.capacity_fee_rate,
+                    status='invalid_reciprocate_capacity'
+                )
                 return
         self.capacity_fee = self.capacity * self.capacity_fee_rate
         await self.send_confirmed_capacity()

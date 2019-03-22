@@ -46,7 +46,7 @@ class InboundCapacityRequestQueries(object):
 
     @staticmethod
     def update_capacity(session_id: str, capacity: int,
-                        capacity_fee_rate: Decimal):
+                        capacity_fee_rate: Decimal, status: str):
         with session_scope() as session:
             request: InboundCapacityRequest = (
                 session.query(InboundCapacityRequest)
@@ -60,10 +60,11 @@ class InboundCapacityRequestQueries(object):
             delta = [c[2] for c in CAPACITY_FEE_RATES if c[0] == capacity_fee_rate][0]
             today = datetime.utcnow().replace(tzinfo=pytz.utc)
             request.keep_open_until = today + delta
+            request.status = status
 
     @staticmethod
     def update_tx_fee_and_invoice(session_id: str, transaction_fee_rate: int,
-                                  r_hash: str):
+                                  r_hash: str, status: str):
         with session_scope() as session:
             icr: InboundCapacityRequest = (
                 session.query(InboundCapacityRequest)
@@ -76,6 +77,7 @@ class InboundCapacityRequestQueries(object):
             icr.transaction_fee = icr.transaction_fee_rate * EXPECTED_BYTES
             icr.total_fee = icr.capacity_fee + icr.transaction_fee
             icr.invoice_r_hash = r_hash
+            icr.status = status
 
     @staticmethod
     def get_by_invoice(r_hash: str) -> dict:
