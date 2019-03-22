@@ -8,6 +8,7 @@ from premailer import transform
 from lnd_sql.database.session import keyring_get_or_create
 from tools.transactional_emails.send_email import send_email, secure_get
 
+templates_directory = os.path.abspath(__file__ + "/../../templates")
 
 def listen_thread():
     pubsub = pgpubsub.connect(
@@ -47,11 +48,11 @@ def process_message(event):
 
 
 def dict_to_email_template(title, table_caption, table_data):
-    email_template = os.path.join('email_template.html')
+    email_template = os.path.join(templates_directory, 'email_template.html')
     with open(email_template, 'r') as html_template:
         html_template_string = html_template.read()
 
-    css_template = os.path.join('styles.css')
+    css_template = os.path.join(templates_directory, 'styles.css')
     with open(css_template, 'r') as css:
         css_string = css.read()
 
