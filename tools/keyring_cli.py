@@ -2,7 +2,7 @@ from website.constants import keyring
 
 
 def set_password(service):
-    new_password = input(f'New password for {service}')
+    new_password = input(f'New password for {service}: ')
 
     keyring.set_password(
         service=service,
