@@ -33,5 +33,4 @@ sqlalchemy
 sqlalchemy-postgres-copy
 structlog
 webassets
-websockets
 wtforms

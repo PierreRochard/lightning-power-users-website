@@ -31,7 +31,8 @@ class InboundCapacityRequestQueries(object):
             request.status = status
 
     @staticmethod
-    def update_connection(session_id: str, remote_pubkey: str, remote_host: str):
+    def update_connection(session_id: str, remote_pubkey: str, remote_host: str,
+                          status: str):
         with session_scope() as session:
             request: InboundCapacityRequest = (
                 session.query(InboundCapacityRequest)
@@ -41,7 +42,7 @@ class InboundCapacityRequestQueries(object):
             )
             request.remote_pubkey = remote_pubkey
             request.remote_host = remote_host
-            request.status = 'connected'
+            request.status = status
 
     @staticmethod
     def update_capacity(session_id: str, capacity: int,
