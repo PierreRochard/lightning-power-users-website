@@ -7,6 +7,7 @@ from aiohttp.web_request import Request
 from lnd_grpc.lnd_grpc import Client
 
 from website.logger import log
+from websocket.logging_middleware import error_middleware
 from websocket.main_server.sessions.session_registry import SessionRegistry
 from websocket.constants import (
     INVOICES_SERVER_ID,
@@ -158,7 +159,7 @@ if __name__ == '__main__':
     else:
         ssl_context = None
 
-    app = web.Application()
+    app = web.Application(middlewares=[error_middleware])
     app['grpc'] = Client(
         grpc_host=args.host,
         grpc_port=args.port,
