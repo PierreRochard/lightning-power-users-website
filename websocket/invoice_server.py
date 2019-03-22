@@ -1,10 +1,12 @@
 import asyncio
 import json
+import signal
 
+import aiohttp
 from google.protobuf.json_format import MessageToDict
-import websockets
 
-from lnd_grpc import lnd_grpc
+
+from lnd_grpc.lnd_grpc import Client
 from lnd_sql.scripts.upsert_invoices import UpsertInvoices
 from website.logger import log
 from websocket.constants import (
@@ -16,21 +18,8 @@ from websocket.utilities import get_server_id
 
 
 class InvoiceServer(object):
-    def __init__(self,
-                 lnd_dir: str = None,
-                 lnd_network: str = 'mainnet',
-                 lnd_grpc_host: str = 'localhost',
-                 lnd_grpc_port: str = '10009',
-                 tls_cert_path: str = None,
-                 macaroon_path: str = None):
-        self.rpc = lnd_grpc.Client(
-            lnd_dir=lnd_dir,
-            network=lnd_network,
-            grpc_host=lnd_grpc_host,
-            grpc_port=lnd_grpc_port,
-            macaroon_path=macaroon_path,
-            tls_cert_path=tls_cert_path
-        )
+    def __init__(self, rpc: Client):
+        self.rpc = rpc
 
     @staticmethod
     async def handle_invoice(local_pubkey, invoice):
@@ -69,8 +58,10 @@ class InvoiceServer(object):
                   client_invoice_data=client_invoice_data)
         client_invoice_data_string = json.dumps(client_invoice_data)
 
-        async with websockets.connect(MAIN_SERVER_WEBSOCKET_URL) as m_ws:
-            await m_ws.send(client_invoice_data_string)
+        async with aiohttp.ClientSession() as session:
+            async with session.ws_connect(MAIN_SERVER_WEBSOCKET_URL) as ws:
+                await ws.send_str(client_invoice_data_string)
+                await ws.close()
 
         chan_open_data = dict(
             server_id=get_server_id('invoices'),
@@ -84,9 +75,10 @@ class InvoiceServer(object):
                   chan_open_data=chan_open_data)
         chan_open_data_string = json.dumps(chan_open_data)
 
-        async with websockets.connect(
-                CHANNEL_OPENING_SERVER_WEBSOCKET_URL) as co_ws:
-            await co_ws.send(chan_open_data_string)
+        async with aiohttp.ClientSession() as session:
+            async with session.ws_connect(CHANNEL_OPENING_SERVER_WEBSOCKET_URL) as ws:
+                await ws.send_str(chan_open_data_string)
+                await ws.close()
 
     async def run(self):
         local_pubkey = self.rpc.get_info().identity_pubkey
@@ -118,14 +110,32 @@ if __name__ == '__main__':
         default=None
     )
 
+    parser.add_argument(
+        '--port',
+        type=str,
+        help='Port for gRPC',
+        default='10009'
+    )
+
+    parser.add_argument(
+        '--host',
+        type=str,
+        help='Host IP address for gRPC',
+        default='127.0.0.1'
+    )
+
     args = parser.parse_args()
 
-    invoice_server = InvoiceServer(
+    rpc = Client(
+        grpc_host=args.host,
+        grpc_port=args.port,
         macaroon_path=args.macaroon,
         tls_cert_path=args.tls
     )
 
-    asyncio.get_event_loop().run_until_complete(
-        invoice_server.run()
-    )
-    asyncio.get_event_loop().run_forever()
+    invoice_server = InvoiceServer(rpc=rpc)
+
+    loop = asyncio.get_event_loop()
+    loop.add_signal_handler(signal.SIGINT, loop.stop)
+    loop.create_task(invoice_server.run())
+    loop.run_forever()

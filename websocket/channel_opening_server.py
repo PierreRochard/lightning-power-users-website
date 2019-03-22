@@ -1,90 +1,100 @@
-import asyncio
 import binascii
 import json
 
+import aiohttp
+from aiohttp import web, WSMsgType
+from aiohttp.web_request import Request
 # noinspection PyPackageRequirements
 from google.protobuf.json_format import MessageToDict
 # noinspection PyProtectedMember
 from grpc._channel import _Rendezvous
-import websockets
-
-from lnd_grpc import lnd_grpc
 from lnd_grpc.lnd_grpc import Client
+
 from website.logger import log
-from websocket.constants import MAIN_SERVER_WEBSOCKET_URL
-from websocket.utilities import get_server_id
+from websocket.constants import (
+    MAIN_SERVER_WEBSOCKET_URL,
+    INVOICES_SERVER_ID,
+    CHANNELS_SERVER_ID
+)
 
 
-class ChannelOpeningServer(object):
-    rpc: Client
+class ChannelOpeningServer(web.View):
+    def __init__(self, request: Request):
+        super().__init__(request)
 
-    def __init__(self, grpc_host, grpc_port, tls_cert_path, macaroon_path):
-        self.rpc = lnd_grpc.Client(
-            grpc_host=grpc_host,
-            grpc_port=grpc_port,
-            tls_cert_path=tls_cert_path,
-            macaroon_path=macaroon_path
-        )
+    async def get(self):
+        websocket = web.WebSocketResponse()
+        await websocket.prepare(self.request)
 
-    async def run(self, websocket, path):
-        data_string_from_client = await websocket.recv()
-        # noinspection PyBroadException
-        try:
-            data = json.loads(data_string_from_client)
-        except:
-            log.error(
-                'Error loading json',
-                exc_info=True,
-                data_string_from_client=data_string_from_client
+        async for msg in websocket:
+            if msg.type == WSMsgType.text:
+                if msg.data == 'close':
+                    await websocket.close()
+                    return
+
+            elif msg.type == WSMsgType.error:
+                log.debug(
+                    'ws connection closed with exception %s' % websocket.exception())
+                return
+
+            # noinspection PyBroadException
+            try:
+                data = json.loads(msg.data)
+            except:
+                log.error(
+                    'Error loading json',
+                    exc_info=True,
+                    msgdata=msg.data
+                )
+                return
+
+            if data.get('server_id', None) != INVOICES_SERVER_ID:
+                log.error(
+                    'Illegal access attempted',
+                    msgdata=msg.data,
+                    data=data
+                )
+                return
+
+            log.debug('Opening channel', data=data)
+            open_channel_response = self.request.app['grpc'].open_channel(
+                node_pubkey_string=data['remote_pubkey'],
+                local_funding_amount=int(data['local_funding_amount']),
+                push_sat=0,
+                sat_per_byte=int(data['sat_per_byte']),
+                spend_unconfirmed=True
             )
-            return
 
-        if data.get('server_id', None) != get_server_id('invoices'):
-            log.error(
-                'Illegal access attempted',
-                data_string_from_client=data_string_from_client,
-                data=data
-            )
-            return
-
-        log.debug('Opening channel', data=data)
-        open_channel_response = self.rpc.open_channel(
-            timeout=4,
-            node_pubkey_string=data['remote_pubkey'],
-            local_funding_amount=int(data['local_funding_amount']),
-            push_sat=0,
-            sat_per_byte=int(data['sat_per_byte']),
-            spend_unconfirmed=True
-        )
-
-        try:
-            for update in open_channel_response:
-                update_data = MessageToDict(update)
-                if not update_data.get('chan_pending', None):
-                    continue
-                txid_bytes = update.chan_pending.txid
-                txid_str = binascii.hexlify(txid_bytes[::-1]).decode('utf8')
-                update_data['chan_pending']['txid'] = txid_str
-                msg = {
-                    'server_id': get_server_id('channels'),
+            try:
+                for update in open_channel_response:
+                    update_data = MessageToDict(update)
+                    if not update_data.get('chan_pending', None):
+                        continue
+                    txid_bytes = update.chan_pending.txid
+                    txid_str = binascii.hexlify(txid_bytes[::-1]).decode('utf8')
+                    update_data['chan_pending']['txid'] = txid_str
+                    msg = {
+                        'server_id': CHANNELS_SERVER_ID,
+                        'session_id': data['session_id'],
+                        'open_channel_update': update_data
+                    }
+                    async with aiohttp.ClientSession() as session:
+                        async with session.ws_connect(
+                                MAIN_SERVER_WEBSOCKET_URL) as m_ws:
+                            await m_ws.send_str(json.dumps(msg))
+                    break
+            except _Rendezvous as e:
+                error_details = e.details()
+                error_message = {
+                    'server_id': CHANNELS_SERVER_ID,
                     'session_id': data['session_id'],
-                    'open_channel_update': update_data
+                    'error': error_details
                 }
-                async with websockets.connect(
-                        MAIN_SERVER_WEBSOCKET_URL) as m_ws:
-                    await m_ws.send(json.dumps(msg))
-                break
-        except _Rendezvous as e:
-            error_details = e.details()
-            error_message = {
-                'server_id': get_server_id('channels'),
-                'session_id': data['session_id'],
-                'error': error_details
-            }
-            log.error('Open channel error', error_message=error_message)
-            async with websockets.connect(
-                    MAIN_SERVER_WEBSOCKET_URL) as m_ws:
-                await m_ws.send(json.dumps(error_message))
+                log.error('Open channel error', error_message=error_message)
+                async with aiohttp.ClientSession() as session:
+                    async with session.ws_connect(
+                            MAIN_SERVER_WEBSOCKET_URL) as m_ws:
+                        await m_ws.send_str(json.dumps(error_message))
 
 
 if __name__ == '__main__':
@@ -123,13 +133,15 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    main_server = ChannelOpeningServer(
+
+    app = web.Application()
+    app['grpc'] = Client(
         grpc_host=args.host,
         grpc_port=args.port,
         macaroon_path=args.macaroon,
         tls_cert_path=args.tls
     )
-    start_server = websockets.serve(main_server.run, 'localhost', 8710)
 
-    asyncio.get_event_loop().run_until_complete(start_server)
-    asyncio.get_event_loop().run_forever()
+    app.add_routes([web.get('/', ChannelOpeningServer)])
+
+    web.run_app(app, host='localhost', port=8710)
