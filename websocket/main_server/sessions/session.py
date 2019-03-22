@@ -288,7 +288,7 @@ class Session(object):
         addresses = LightningAddressesQueries.get(self.remote_pubkey)
         if addresses is not None:
             for address in addresses:
-                self.remote_host = address
+                self.remote_host = address['address']
                 error = await self.try_connect(timeout=3)
                 if error is None:
                     self.log.debug(
