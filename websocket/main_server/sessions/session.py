@@ -3,10 +3,12 @@ from decimal import Decimal
 
 from aiohttp.web_ws import WebSocketResponse
 from flask_qrcode import QRcode
+# noinspection PyProtectedMember
+from grpc._channel import _Rendezvous
 from structlog import get_logger
-
 from lnd_grpc.lnd_grpc import Client
 from lnd_sql.scripts.upsert_invoices import UpsertInvoices
+
 from website.constants import EXPECTED_BYTES, CAPACITY_FEE_RATES
 from websocket.constants import PUBKEY_LENGTH
 from websocket.queries import (
@@ -94,17 +96,19 @@ class Session(object):
         InboundCapacityRequestQueries.update_connection(
             session_id=self.session_id,
             remote_pubkey=self.remote_pubkey,
-            remote_host=self.remote_host
+            remote_host=self.remote_host,
+            status='connected'
         )
 
-    async def send_error_message(self, error: str):
+    async def send_error_message(self, error: str, status: str = None):
         message = {
             'action': 'error_message',
             'error': error
         }
         await self.send(message=message)
-        InboundCapacityRequestQueries.update_status(self.session_id,
-                                                    status=error)
+        if status is not None:
+            InboundCapacityRequestQueries.update_status(self.session_id,
+                                                        status=error)
 
     async def send_confirmed_capacity(self):
         message = {
@@ -170,7 +174,8 @@ class Session(object):
                 remote_pubkey_input=remote_pubkey_input
             )
             await self.send_error_message(
-                'Please enter your PubKey'
+                error='Please enter your PubKey',
+                status='missing_pubkey'
             )
             self.remote_pubkey = None
             return
@@ -185,6 +190,12 @@ class Session(object):
             await self.send_error_message(
                 error='Invalid PubKey format'
             )
+            InboundCapacityRequestQueries.update_connection(
+                session_id=self.session_id,
+                remote_pubkey=self.remote_pubkey,
+                remote_host=self.remote_host,
+                status='invalid_pubkey'
+            )
             self.remote_pubkey = None
             return
         elif len(parts) == 2:
@@ -193,12 +204,19 @@ class Session(object):
             self.remote_host = None
 
         if len(self.remote_pubkey) != PUBKEY_LENGTH:
+            error = f'Invalid PubKey length, expected {PUBKEY_LENGTH} characters'
             self.log.error(
-                'Invalid PubKey length',
+                error,
                 pubkey=self.remote_pubkey
             )
             await self.send_error_message(
-                f'Invalid PubKey length, expected {PUBKEY_LENGTH} characters'
+                error=error
+            )
+            InboundCapacityRequestQueries.update_connection(
+                session_id=self.session_id,
+                remote_pubkey=self.remote_pubkey,
+                remote_host=self.remote_host,
+                status='invalid_pubkey'
             )
             self.remote_pubkey = None
             return
@@ -223,6 +241,31 @@ class Session(object):
         if is_connected:
             self.log.debug(
                 'Already connected to peer',
+                remote_pubkey=self.remote_pubkey
+            )
+            await self.send_connected()
+            return
+        elif self.remote_host is not None:
+            address = '@'.join([self.remote_pubkey, self.remote_host])
+            try:
+                self.rpc.connect(address=address, timeout=10)
+            except _Rendezvous as e:
+                details = e.details()
+                self.log.error(
+                    'gRPC connect to peer failed',
+                    remote_pubkey=self.remote_pubkey,
+                    remote_host=self.remote_host,
+                    details=details,
+                    exc_info=True
+                )
+                await self.send_error_message(please_connect)
+                InboundCapacityRequestQueries.update_status(
+                    session_id=self.session_id,
+                    status=f'grpc_connect_failed: {details}'
+                )
+                return
+            self.log.debug(
+                'Connected to peer',
                 remote_pubkey=self.remote_pubkey
             )
             await self.send_connected()
