@@ -1,7 +1,7 @@
 import uuid
 
 from bitcoin.core import COIN
-from flask import render_template, session, app, current_app
+from flask import render_template, session, current_app
 from flask_admin import BaseView, expose
 
 from lnd_sql import session_scope

@@ -4,9 +4,8 @@ import sys
 import structlog
 from flask import Flask, redirect, url_for
 from flask_admin import Admin
-from flask_assets import Environment
+from flask_assets import Environment, Bundle
 from flask_qrcode import QRcode
-from webassets import Bundle
 
 from website.constants import FLASK_SECRET_KEY
 from website.extensions import cache
