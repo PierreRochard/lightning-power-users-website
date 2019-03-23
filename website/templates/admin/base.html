@@ -38,16 +38,16 @@
             background-color: #e17e08;
         }
 
-        .container  .img-responsive {
+        .container .img-responsive {
             display: block;
             width: auto;
             max-height: 300px;
             max-width: 300px;
         }
 
-         .paid {
-             position: relative;
-         }
+        .paid {
+            position: relative;
+        }
 
         .paid::before {
             content: "";
@@ -90,6 +90,26 @@
                 opacity: 1;
             }
         }
+
+        html {
+            position: relative;
+            min-height: 100%;
+        }
+
+        body {
+            /* Margin bottom by footer height */
+            margin-bottom: 60px;
+        }
+
+        footer {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            /* Set the fixed height of the footer here */
+            height: 60px;
+            line-height: 60px; /* Vertically center the text there */
+        }
+
         </style>
 
         <script src="{{ url_for('static',filename='js/jquery-3.2.1.slim.min.js') }}"
@@ -115,21 +135,18 @@
 </head>
 <body>
 <header>
-    <div class="navbar navbar-expand-sm navbar-dark">
+    <div class="navbar navbar-expand navbar-dark">
         <div class="container d-flex justify-content-between">
             <a class="navbar-brand" href="#">
-                <img src="{{ url_for('static',filename='img/small_badger.png') }}" width="125" height="125" alt="">
+                <img src="{{ url_for('static',filename='img/small_badger.png') }}"
+                     width="125" height="125" alt="">
             </a>
-            <a href="/" class="navbar-brand d-flex align-items-center">
-                <strong>Lightning Power Users</strong>
-            </a>
+            <div class="d-none d-md-block">
+                <a href="/" class="navbar-brand d-flex align-items-center">
+                    <strong>Lightning Power Users</strong>
+                </a>
+            </div>
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav mr-auto">
-                </ul>
-                <ul class="nav navbar-nav navbar-right">
-                    <li>
-                    </li>
-                </ul>
             </div>
         </div>
     </div>
@@ -137,6 +154,36 @@
 
 {% block body %}{% endblock %}
 
+<footer id="footer">
+    <div class="container">
+        <div class="row justify-content-center align-items-center">
+            <div class="col-lg-2">
+                <a href="https://github.com/lightning-power-users/lightning-power-users-website/issues/new?assignees=PierreRochard&labels=&template=contact.md&title="
+                   target="_blank">
+                    Contact
+                </a>
+            </div>
+
+            <div class="col-lg-10">
+                <div class="input-group">
+                    <input class="form-control"
+                           id="lpu-pubkey"
+                           value="0331f80652fb840239df8dc99205792bba2e559a05469915804c08420230e23c7c@lightningpowerusers.com:9735"
+                           readonly>
+
+                    <div class="input-group-append">
+                        <button type="button"
+                                class="btn btn btn-outline-secondary input-group-text"
+                                data-clipboard-target="#lpu-pubkey">
+                            Copy
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+</footer>
 
 </body>
 </html>
