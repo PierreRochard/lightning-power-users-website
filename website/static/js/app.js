@@ -175,6 +175,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                     const reciprocateAmountString = reciprocateAmount.toLocaleString();
                     capacitySelect.options[0].value = reciprocateAmount;
                     capacitySelect.options[0].textContent = 'Reciprocate ' + reciprocateAmountString;
+                    changeEventHandler();
                 }
                 hideProgressBar();
                 connectTabContent.classList.remove('show');

@@ -1,7 +1,7 @@
 import uuid
 
 from bitcoin.core import COIN
-from flask import render_template, session
+from flask import render_template, session, app, current_app
 from flask_admin import BaseView, expose
 
 from lnd_sql import session_scope
@@ -28,9 +28,13 @@ class HomeView(BaseView):
             session['session_id'] = uuid.uuid4().hex
         if session.get('session_id', None) is None:
             session['session_id'] = uuid.uuid4().hex
+        if current_app.debug:
+            ws = 'ws://localhost:8765'
+        else:
+            ws = MAIN_SERVER_WEBSOCKET_URL
         return render_template(
             'home_view/index.html',
-            WEBSOCKET_HOST=MAIN_SERVER_WEBSOCKET_URL,
+            WEBSOCKET_HOST=ws,
             form=form,
             price_per_sat=price_per_sat,
             EXPECTED_BYTES=EXPECTED_BYTES

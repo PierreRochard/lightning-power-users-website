@@ -3,7 +3,6 @@ import ssl
 from uuid import UUID
 
 from aiohttp import web, WSMsgType
-from aiohttp.web_request import Request
 from lnd_grpc.lnd_grpc import Client
 
 from website.logger import log
@@ -16,9 +15,6 @@ from websocket.constants import (
 
 
 class MainWebsocket(web.View):
-    def __init__(self, request: Request):
-        super().__init__(request)
-
     async def get(self):
         websocket = web.WebSocketResponse()
         await websocket.prepare(self.request)
