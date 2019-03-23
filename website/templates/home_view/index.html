@@ -7,7 +7,9 @@
         const session_id = "{{ session['session_id'] }}";
         const pricePerSat = {{ price_per_sat }};
     </script>
-    <script src="{{ url_for('static',filename='js/app.js') }}"></script>
+    {% assets filters="jsmin", output="gen/packed.js", "js/app.js" %}
+        <script type="text/javascript" src="{{ ASSET_URL }}"></script>
+    {% endassets %}
     <div class="container">
         <div class="row">
             <div class="col-lg-5">
