@@ -31,7 +31,8 @@ class MockMainWebsocket(web.View):
             if action == 'register':
                 await websocket.send_json({'action': 'registered'})
             elif action == 'connect':
-                await websocket.send_json({'action': 'connected', 'data': None})
+                await websocket.send_json({'action': 'error_message', 'error': 'error'})
+                # await websocket.send_json({'action': 'connected', 'data': None})
             elif action == 'capacity_request':
                 await websocket.send_json({'action': 'confirmed_capacity'})
             elif action == 'chain_fee':

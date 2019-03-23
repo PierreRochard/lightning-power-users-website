@@ -106,9 +106,12 @@ document.addEventListener('DOMContentLoaded', async function () {
     const connectButton = document.getElementById('connect_button');
     const progressBar = document.getElementById('progress-bar');
     const progressBarDiv = document.getElementById('progress-bar-div');
+    const progressBarRow = document.getElementById('progress-bar-row');
 
     const errorMessage = document.getElementById('error-message');
-    const successButton = document.getElementById('success-button');
+    const errorMessageRow = document.getElementById('error-message-row');
+    const transactionButton = document.getElementById('transaction-button');
+    const transactionButtonRow = document.getElementById('transaction-button-row');
 
     const connectTab = document.getElementById('connect-tab');
     const connectTabContent = document.getElementById('connect-tab-content');
@@ -137,16 +140,16 @@ document.addEventListener('DOMContentLoaded', async function () {
     function showProgressBar(content) {
         progressBar.style.width = "100%";
         progressBar.textContent = content;
-        progressBarDiv.style.visibility = "visible";
+        progressBarRow.style.display = "flex";
     }
 
     function hideProgressBar() {
-        progressBarDiv.style.visibility = "hidden";
+        progressBarRow.style.display = "none";
     }
 
     function hideErrorMessage() {
         errorMessage.textContent = "";
-        errorMessage.style.visibility = "hidden";
+        errorMessageRow.style.display = "none";
     }
 
     session_websocket.onopen = function (event) {
@@ -246,12 +249,12 @@ document.addEventListener('DOMContentLoaded', async function () {
             case "channel_open":
                 console.log(event.data);
                 hideProgressBar();
-                successButton.style.visibility = "visible";
-                successButton.href = msg.url;
+                transactionButtonRow.style.display = "flex";
+                transactionButton.href = msg.url;
                 document.onkeydown = null;
                 document.onkeydown = function(event) {
                     if (event.which === 13 || event.which === 9) {
-                        successButton.click();
+                        transactionButton.click();
                         event.preventDefault();
                     }
                 };
@@ -260,7 +263,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 console.log("error message");
                 document.onkeydown = null;
                 hideProgressBar();
-                errorMessage.style.visibility = "visible";
+                errorMessageRow.style.display = "flex";
                 errorMessage.textContent = msg.error;
                 connectButton.disabled = false;
                 connectTextarea.disabled = false;
