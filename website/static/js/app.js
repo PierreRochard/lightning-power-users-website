@@ -107,7 +107,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     const progressBar = document.getElementById('progress-bar');
     const progressBarDiv = document.getElementById('progress-bar-div');
 
-    const errorMessage = document.getElementById('error_message');
+    const errorMessage = document.getElementById('error-message');
+    const successButton = document.getElementById('success-button');
 
     const connectTab = document.getElementById('connect-tab');
     const connectTabContent = document.getElementById('connect-tab-content');
@@ -244,6 +245,15 @@ document.addEventListener('DOMContentLoaded', async function () {
             case "channel_open":
                 console.log(event.data);
                 hideProgressBar();
+                successButton.style.visibility = "visible";
+                successButton.href = msg.url;
+                document.onkeydown = null;
+                document.onkeydown = function(event) {
+                    if (event.which === 13 || event.which === 9) {
+                        successButton.click();
+                        event.preventDefault();
+                    }
+                };
                 break;
             case "error_message":
                 console.log("error message");
