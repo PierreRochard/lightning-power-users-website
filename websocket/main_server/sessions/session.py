@@ -256,8 +256,7 @@ class Session(object):
         if not self.remote_pubkey:
             return
 
-        please_connect = 'Error: please connect to our node 0331f80652fb840239df8dc99205792bba2e559a05469915804c08420230e23c7c@lightningpowerusers.com:9735'
-        error = please_connect
+        error = None
 
         is_connected = ActivePeerQueries.is_connected(self.remote_pubkey)
         if is_connected:
@@ -303,7 +302,10 @@ class Session(object):
             pubkey=self.remote_pubkey,
             exc_info=True
         )
-        await self.send_error_message(error)
+        if error is None:
+            error = ''
+        please_connect = f'Error: {error} please connect to our node 0331f80652fb840239df8dc99205792bba2e559a05469915804c08420230e23c7c@lightningpowerusers.com:9735'
+        await self.send_error_message(please_connect)
         InboundCapacityRequestQueries.update_connection(
             session_id=self.session_id,
             remote_pubkey=self.remote_pubkey,
