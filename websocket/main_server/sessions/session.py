@@ -278,7 +278,7 @@ class Session(object):
             error = await self.try_connect()
             if error is None:
                 self.log.debug(
-                    'Connected to peer',
+                    'Connected with user input',
                     remote_pubkey=self.remote_pubkey
                 )
                 await self.send_connected('connected_with_input')
@@ -292,7 +292,7 @@ class Session(object):
                 error = await self.try_connect(timeout=3)
                 if error is None:
                     self.log.debug(
-                        'Connected to peer',
+                        'Connected with graph',
                         remote_pubkey=self.remote_pubkey
                     )
                     await self.send_connected('connected_with_graph')
