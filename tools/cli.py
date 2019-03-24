@@ -6,6 +6,7 @@ from lnd_grpc import lnd_grpc
 from lnd_grpc.protos.rpc_pb2 import OpenStatusUpdate
 from tools.google_sheet import get_google_sheet_data
 from tools.node_operator import NodeOperator
+from tools.policy import SetPolicy
 from website.logger import log
 
 if __name__ == '__main__':
@@ -157,10 +158,4 @@ if __name__ == '__main__':
             macaroon_path=args.macaroon,
             tls_cert_path=args.tls
         )
-        response = rpc.update_channel_policy(
-            base_fee_msat=1000,
-            fee_rate=0.000001,
-            time_lock_delta=144
-        )
-        response_dict = MessageToDict(response)
-        log.info('update_channel_policy', response=response_dict)
+        SetPolicy().set_policy(rpc)

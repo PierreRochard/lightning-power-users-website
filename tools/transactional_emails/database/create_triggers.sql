@@ -42,3 +42,9 @@ DROP TRIGGER IF EXISTS pending_open_channels_notify_delete ON pending_open_chann
 CREATE TRIGGER pending_open_channels_notify_delete
   AFTER DELETE ON pending_open_channels
   FOR EACH ROW EXECUTE PROCEDURE table_notify();
+
+
+DROP TRIGGER IF EXISTS forwarding_events_notify_insert ON forwarding_events;
+CREATE TRIGGER forwarding_events_notify_insert
+  AFTER INSERT ON forwarding_events
+  FOR EACH ROW EXECUTE PROCEDURE table_notify();
