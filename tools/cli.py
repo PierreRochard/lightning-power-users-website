@@ -1,10 +1,11 @@
+import time
+
 from google.protobuf.json_format import MessageToDict
 # noinspection PyProtectedMember
 from grpc._channel import _Rendezvous
 
 from lnd_grpc import lnd_grpc
 from lnd_grpc.protos.rpc_pb2 import OpenStatusUpdate
-from tools.google_sheet import get_google_sheet_data
 from tools.node_operator import NodeOperator
 from tools.policy import SetPolicy
 from website.logger import log
@@ -99,15 +100,6 @@ if __name__ == '__main__':
         )
         node_operator.reconnect_all()
 
-    elif args.action == 'sheet':
-        node_operator = NodeOperator(
-            lnd_grpc_host=args.host,
-            lnd_grpc_port=args.port,
-            macaroon_path=args.macaroon,
-            tls_cert_path=args.tls
-        )
-        get_google_sheet_data(node_operator)
-
     elif args.action == 'open':
         node_operator = NodeOperator(
             lnd_grpc_host=args.host,
@@ -158,4 +150,6 @@ if __name__ == '__main__':
             macaroon_path=args.macaroon,
             tls_cert_path=args.tls
         )
-        SetPolicy().set_policy(rpc)
+        while True:
+            SetPolicy().set_policy(rpc)
+            time.sleep(1*60*60)

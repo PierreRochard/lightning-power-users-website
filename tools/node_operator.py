@@ -12,7 +12,6 @@ from lnd_grpc.protos.rpc_pb2 import OpenStatusUpdate
 from tools.lightning_graph import LightningGraph
 from website.logger import log
 from tools.channel import Channel
-from tools.google_sheet import get_google_sheet_data
 from tools.node import Node
 
 
@@ -249,9 +248,6 @@ if __name__ == '__main__':
 
     elif args.action == 'reconnect':
         node_operator.reconnect_all()
-
-    elif args.action == 'sheet':
-        get_google_sheet_data(node_operator)
 
     elif args.action == 'open':
         response = node_operator.rpc.open_channel(
