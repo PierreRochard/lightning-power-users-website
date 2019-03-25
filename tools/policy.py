@@ -28,6 +28,8 @@ SELECT open_channels.remote_pubkey,
        open_channels.local_balance,
        open_channels.remote_balance,
        round(open_channels.local_balance::FLOAT/open_channels.capacity*100) as channel_percent_ours,
+       open_peers.our_chan_count,
+       open_peers.network_capacity_percent,
        open_peers.percent_ours as total_percent_ours,
        our_routing_policies.fee_base_msat AS our_base_fee,
        our_routing_policies.fee_rate_milli_msat AS our_fee_rate,
@@ -63,7 +65,7 @@ GROUP BY open_channels.remote_pubkey, open_channels.chan_id, open_channels.chann
          open_channels.capacity, our_routing_policies.fee_base_msat,
          our_routing_policies.fee_base_msat, our_routing_policies.fee_rate_milli_msat,
          their_node.alias, open_channels.local_balance, open_channels.remote_balance,
-         open_peers.percent_ours, their_routing_policies.fee_base_msat, their_routing_policies.fee_rate_milli_msat
+         open_peers.percent_ours, their_routing_policies.fee_base_msat, their_routing_policies.fee_rate_milli_msat, open_peers.our_chan_count, open_peers.network_capacity_percent
 HAVING count(in_forwarding_events.id) > 10
 AND sum(in_forwarding_events.amount_in) > 100000
 ORDER BY sum(in_forwarding_events.amount_in) DESC, capacity DESC, remote_pubkey;
