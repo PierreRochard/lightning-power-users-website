@@ -43,11 +43,11 @@ from open_channels
        JOIN forwarding_events out_forwarding_events
             ON out_forwarding_events.channel_id_out = open_channels.chan_id
               and out_forwarding_events.timestamp >
-                  current_date - interval '10' day
+                  current_date - interval '30' day
        JOIN forwarding_events in_forwarding_events
             ON in_forwarding_events.channel_id_in = open_channels.chan_id
               and
-               in_forwarding_events.timestamp > current_date - interval '10' day
+               in_forwarding_events.timestamp > current_date - interval '30' day
        JOIN routing_policies our_routing_policies
             ON our_routing_policies.channel_id = open_channels.chan_id
               AND our_routing_policies.pubkey = open_channels.local_pubkey
