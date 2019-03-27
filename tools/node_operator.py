@@ -56,21 +56,9 @@ class NodeOperator(object):
                                                          **MessageToDict(m)))
          for m in channels]
 
-        pending_channels = [c for c in self.rpc.list_pending_channels()]
-        [self.nodes[m.remote_node_pub].add_channel(Channel(self.rpc,
-                                                           **m))
-         for m in pending_channels]
-
-        closed_channels = [c for c in self.rpc.closed_channels()]
-        [self.nodes[m.remote_pubkey].add_channel(Channel(self.rpc,
-                                                         **MessageToDict(m)))
-         for m in closed_channels]
-
         log.debug(
             'Got channels',
-            open_channels=len(channels),
-            pending_channels=len(pending_channels),
-            closed_channels=len(closed_channels)
+            open_channels=len(channels)
         )
 
     def get_peers(self):
