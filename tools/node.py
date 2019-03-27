@@ -47,7 +47,7 @@ class Node(object):
         )
         for address in self.info['node'].get('addresses', []):
             try:
-                self.rpc.connect_peer(self.pubkey, address['addr'], timeout=5)
+                self.rpc.connect('@'.join([self.pubkey, address['addr']]))
                 log.info(
                     'Successfully reconnected',
                     pubkey=self.pubkey,
