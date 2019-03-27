@@ -9,13 +9,16 @@ from lnd_sql.models import OpenChannels, RoutingPolicies
 
 
 class SetPolicy(object):
+    def __init__(self):
+        self.lowest_fee = 10
+        self.highest_fee = 200
 
     def calculate_fee(self, volume):
-        slope = (self.router_fee_range[1] - self.router_fee_range[0]) / (
+        slope = (self.highest_fee - self.lowest_fee) / (
                 self.median_volume - self.lowest_volume)
         intercept = -self.lowest_volume * slope
-        return min(int(intercept + slope * volume + self.router_fee_range[0]),
-                   500)
+        return min(int(intercept + slope * volume + self.lowest_fee),
+                   self.highest_fee)
 
     def set_policy(self, rpc):
         with session_scope() as session:
@@ -70,7 +73,6 @@ HAVING count(in_forwarding_events.id) > 10
 AND sum(in_forwarding_events.amount_in) > 100000
 ORDER BY sum(in_forwarding_events.amount_in) DESC, capacity DESC, remote_pubkey;
             """)
-            self.router_fee_range = (100, 500)
             routers = list(routers)
             volumes = [r.in_10_day_total_pmts for r in routers]
             routing_channel_points = [r.associated_channels for r in routers]
@@ -82,8 +84,8 @@ ORDER BY sum(in_forwarding_events.amount_in) DESC, capacity DESC, remote_pubkey;
 
             highest_fee = self.calculate_fee(self.highest_volume)
             lowest_fee = self.calculate_fee(self.lowest_volume)
-            assert lowest_fee == self.router_fee_range[0]
-            assert highest_fee == self.router_fee_range[1]
+            assert lowest_fee == self.lowest_fee
+            assert highest_fee == self.highest_fee
 
             for index, routing_channel in enumerate(routers):
                 fee = self.calculate_fee(routing_channel.in_10_day_total_pmts)
@@ -103,7 +105,7 @@ ORDER BY sum(in_forwarding_events.amount_in) DESC, capacity DESC, remote_pubkey;
                         response=response_dict
                     )
 
-            default_fee = 10
+            default_fee = self.lowest_fee
             for channel in (
                     session.query(OpenChannels)
                             .join(RoutingPolicies, and_(

@@ -153,3 +153,21 @@ if __name__ == '__main__':
         while True:
             SetPolicy().set_policy(rpc)
             time.sleep(1*60*60)
+
+    elif args.action == 'default_policy':
+        rpc = lnd_grpc.Client(
+            grpc_host=args.host,
+            grpc_port=args.port,
+            macaroon_path=args.macaroon,
+            tls_cert_path=args.tls
+        )
+        response = rpc.update_channel_policy(
+            base_fee_msat=1000,
+            fee_rate=0.000001*50,
+            time_lock_delta=144
+        )
+        response_dict = MessageToDict(response)
+        log.info(
+            'update_channel_policy',
+            response=response_dict
+        )
