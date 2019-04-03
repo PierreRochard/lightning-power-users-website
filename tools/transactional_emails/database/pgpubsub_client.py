@@ -32,6 +32,9 @@ def process_message(event):
     # TODO: Query the table if 'row' is not in the data dictionary
     # (due to pg_notify's 8kB payload limit)
 
+    if data["row"].get("status", None) == 'registered':
+        return
+
     if data['table_name'] == 'public.inbound_capacity_request':
         subject = f'{data["row"]["session_id"]} {data["row"]["status"]}'
     else:
