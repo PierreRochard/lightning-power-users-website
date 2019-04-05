@@ -162,9 +162,11 @@ if __name__ == '__main__':
             tls_cert_path=args.tls
         )
         response = rpc.update_channel_policy(
+            chan_point='',
             base_fee_msat=1000,
             fee_rate=0.000001*50,
-            time_lock_delta=144
+            time_lock_delta=144,
+            is_global=True
         )
         response_dict = MessageToDict(response)
         log.info(
