@@ -1,6 +1,8 @@
 from google.protobuf.json_format import MessageToDict
+from grpc._channel import _Rendezvous
 
 from lnd_grpc.lnd_grpc import Client
+from website.logger import log
 
 
 class Channel(object):
@@ -22,7 +24,13 @@ class Channel(object):
             self.chan_id = None
 
         if self.chan_id is not None and not self.data.get('close_height', False):
-            self.info = MessageToDict(self.rpc.get_chan_info(self.chan_id))
+            try:
+                self.info = MessageToDict(self.rpc.get_chan_info(self.chan_id))
+            except _Rendezvous as e:
+                log.error(
+                    'get_chan_info',
+                    exc_info=True
+                )
 
         self.remote_pubkey = remote_pubkey
         if remote_pubkey is None and self.info is not None:
