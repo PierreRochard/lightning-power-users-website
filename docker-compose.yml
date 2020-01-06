@@ -1,0 +1,52 @@
+version: '3'
+services:
+  postgres:
+    image: postgres:alpine
+    restart: always
+    volumes:
+      - "./db_data:/var/lib/postgresql/data"
+    ports:
+      - 5436:5432
+    networks:
+      - lpu-network
+    environment:
+      POSTGRES_USER: ${PGUSER}
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+      POSTGRES_DB: ${PGDB}
+  flask:
+    image: lpu-flask
+    stdin_open: true
+    tty: true
+    build:
+      context: .
+      dockerfile: src/bitcoin_acks/lpu/Dockerfile
+    volumes:
+      - "./:/website"
+    networks:
+      - lpu-network
+    depends_on:
+      - postgres
+    environment:
+      PYTHONPATH: "/website/src/"
+    ports:
+      - "5005:5005"
+  dataworker:
+    image: lpu-flask
+    command: [ "python3", "bitcoin_acks/github_data/pull_request_events.py" ]
+    stdin_open: true
+    tty: true
+    build:
+      context: .
+      dockerfile: src/bitcoin_acks/lpu/Dockerfile
+    volumes:
+      - "./:/website"
+    networks:
+      - lpu-network
+    depends_on:
+      - postgres
+    environment:
+      PYTHONPATH: "/website/src/"
+
+networks:
+  lpu-network:
+    driver: bridge
